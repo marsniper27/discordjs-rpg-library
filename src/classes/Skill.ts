@@ -114,3 +114,60 @@ export class Rage extends Skill {
     p1.attack /= 2;
   }
 }
+
+export class Mischief extends Skill {
+  name = "Mischief";
+  id = "mischief";
+  description = "Mischief plays out randomly";
+  price = 500_000;
+  interceptRate = 0.25;
+
+  use(p1: Fighter, p2: Fighter) {
+
+//    const myrandom = random.real(0.75,1.25);
+//    const myrand = myrandom.toFixed(2);
+
+//    const armorrandom = random.real(0.75,1.25);
+//    const armorAmount = armorrandom;
+//    p1.armor *= armorAmount;
+
+    const healAmount = random.real(0.75,1.25);
+    p1.hp *= healAmount;
+    var healgreater = "";
+    if (healAmount > 1) { healgreater = "increase";}
+    else { healgreater = "decrease";}
+
+    const attackAmount = random.real(0.75,1.25);
+    const oldAttack = p1.attack;
+    p1.attack *= attackAmount;
+    var attackgreater = "";
+    if (attackAmount > 1) { attackgreater = "increase";}
+    else { attackgreater = "decrease";}
+
+
+    console.log(
+        `${p1.name} vs ${p2.name}
+        ${inlineCode(formatPercent(healAmount))} health ${healgreater}
+        ${inlineCode(formatPercent(attackAmount))} attack ${attackgreater}`);
+
+   
+
+        const embed = new EmbedBuilder()
+        //      .setAuthor({ name: 'The Narrator' })
+              .setTitle("Mischief")
+              .setColor("Red") // Use string color names or hex codes
+              .setDescription(
+                `${p1.name} created **${this.name}**!\n
+                ${p1.name} vs ${p2.name}\n
+                ${inlineCode(formatPercent(healAmount))} health ${healgreater}\n
+                ${inlineCode(formatPercent(attackAmount))} attack ${attackgreater}`
+              );
+
+    if (this.imageUrl)
+      embed.setThumbnail(this.imageUrl);
+
+    return embed;
+  }
+
+  close(_p1: Fighter, _p2: Fighter) {}
+}

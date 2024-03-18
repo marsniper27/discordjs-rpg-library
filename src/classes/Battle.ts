@@ -43,7 +43,7 @@ export class Battle extends BaseBattle {
   async run() {
 
     if (this.fighters.length <= 1)
-      throw new Error("cannot battle with 1 or less player");
+    this.reply("cannot battle with 1 or less player");
 
     const battleQueue = this.fighters.map(x => cloneDeep(x));
     await this.reply("Starting battle");
@@ -104,12 +104,13 @@ export class Battle extends BaseBattle {
       await this.updateEmbed(battleEmbed);
 
       battleQueue.push(player);
-
+      let playerDeathText = "";
       if (opponent.hp <= 0) {
         const index = battleQueue.findIndex(x => x.id === opponent.id);
         battleQueue.splice(index, 1);
 
-        let text = `${opponent.name} has died in the battle`;
+        let text = `${opponent.name} has died in the battle \n`;
+        playerDeathText += text;
         if (this.playerDiedText) {
           text = this.playerDiedText(opponent);
         }

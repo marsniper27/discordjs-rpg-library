@@ -1,5 +1,5 @@
 import { CommandInteraction, EmbedBuilder } from "discord.js";
-import { Fighter } from ".";
+import { Fighter } from "./Fighter";
 import { BaseBattle } from "./BaseBattle";
 import cloneDeep from "lodash.clonedeep";
 import { GOLD, isEven, random } from "./utils";

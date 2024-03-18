@@ -1,3 +1,4 @@
+// Fighter.ts
 import { EmbedBuilder } from "discord.js";
 import { Armor } from "./Armor";
 import { Base } from "./Base";
@@ -40,6 +41,13 @@ export class Fighter extends Base {
   critChance = 0.3;
   /** Critical attack percentage increment */
   critDamage = 1.2;
+
+  gamesPlayed =0;
+  gamesWon=0;
+  coins=10;
+  supercoins=0;
+  level=1;
+  xp=0;
   /** Array of equipped armors */
   equippedArmors: Armor[] = [];
   /** Array of equipped weapons */
@@ -95,6 +103,10 @@ export class Fighter extends Base {
       .setColor(GOLD)
       .setFields([
         { name: "Name", value: this.name },
+        { name: "Coins", value: inlineCode(Math.round(this.coins).toString()), inline: true },
+        { name: "Supercoins", value: inlineCode(Math.round(this.supercoins).toString()), inline: true },
+        { name: "Level", value: inlineCode(Math.round(this.level).toString()), inline: true },
+        { name: "XP", value: inlineCode(Math.round(this.xp).toString()), inline: true },
         { name: "Attack", value: inlineCode(Math.round(this.attack).toString()), inline: true },
         { name: "HP", value: inlineCode(Math.round(this.hp).toString()), inline: true },
         { name: "Armor", value: inlineCode(armor), inline: true },
@@ -104,6 +116,9 @@ export class Fighter extends Base {
         { name: "Pet", value: this.pet?.name || "none" },
         { name: "Armors", value: armorList || "none", inline: true },
         { name: "Weapons", value: weaponList || "none", inline: true },
+        { name: '\u200B', value: '\u200B', inline: false },
+        { name: "Games Played", value:inlineCode(`${this.gamesPlayed || 0}`), inline: true },
+        { name: "Games Won", value: inlineCode(`${this.gamesWon || 0}`), inline: true },
       ])
 
     if (this.imageUrl)
