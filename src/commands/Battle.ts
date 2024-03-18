@@ -1,9 +1,9 @@
 import { SlashCommandBuilder, CommandInteraction } from "discord.js";
-import { Chest } from "../classes/Armor";
+// import { Chest } from "../classes/Armor";
 import { Battle } from "../classes/Battle";
-import { Dragon } from "../classes/Pet";
+// import { Dragon } from "../classes/Pet";
 import { Player } from "../classes/Player";
-import { Rage } from "../classes/Skill";
+// import { Rage } from "../classes/Skill";
 import { incrementFields } from "../utils/db"
 
 module.exports = {
@@ -12,7 +12,7 @@ module.exports = {
 		.setDescription('Initiates a battle with another player')
         .addUserOption(option => 
           option
-            .setName("player")
+            .setName("opponent")
             .setDescription("The player you want to fight")
             .setRequired(true)
         ),
@@ -24,19 +24,20 @@ module.exports = {
         }
 
         const author = await Player.createInstance(i.user, i.guildId);
-        const opponent = i.options.getUser("player");
+        const opponent = i.options.getUser("opponent");
 
         if (!opponent) {
           throw new Error("Please mention your opponent(s)");
         }
 
-        author.skill = new Rage();
+        await i.reply(`${i.user.displayName} has challenged ${opponent}`);
+        // author.skill = new Rage();
 
-        const pet = new Dragon();
-        pet.setOwner(author);
+        // const pet = new Dragon();
+        // pet.setOwner(author);
 
-        const chest = new Chest();
-        author.equipArmor(chest);
+        // const chest = new Chest();
+        // author.equipArmor(chest);
 
         const opponentPlayer = await Player.createInstance(opponent, i.guildId);
         const battle = new Battle(i, [author, opponentPlayer]);

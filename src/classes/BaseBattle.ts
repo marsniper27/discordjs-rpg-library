@@ -1,4 +1,4 @@
-import { EmbedBuilder, CommandInteraction } from "discord.js";
+import { EmbedBuilder, CommandInteraction,Message } from "discord.js";
 import { RED, sleep } from "./utils";
 import { Fighter } from "./Fighter";
 
@@ -21,6 +21,8 @@ export abstract class BaseBattle {
 
   /** Logs battle to stdout */
   logBattle = false;
+  /** Reference to the battle message for updates */
+  private battleMessage: Message | null = null;
 
   /** 
    * @param {CommandInteraction} i - discord.js's CommandInteraction
@@ -55,13 +57,21 @@ export abstract class BaseBattle {
     if (options instanceof EmbedBuilder) {
       content = { embeds: [options] };
     } else {
-      content = { content: options }
+      content = { content: options };
     }
 
-    if (this.i.replied) {
-      await this.i.editReply(content)
+    // if (this.i.replied) {
+    //   await this.i.editReply(content)
+    // } else {
+    //   await this.i.reply(content);
+    // }
+    if (this.battleMessage) {
+      await this.battleMessage.edit(content);
     } else {
-      await this.i.reply(content);
+      this.battleMessage = await this.i.followUp(content);
+      // if (sentMessage instanceof Message) {
+      //   this.battleMessage = sentMessage;
+      // }
     }
   }
 

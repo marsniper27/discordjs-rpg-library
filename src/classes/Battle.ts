@@ -1,4 +1,4 @@
-import { EmbedBuilder } from "discord.js";
+import { EmbedBuilder,userMention } from "discord.js";
 import { GOLD, random } from "./utils";
 import { Fighter } from "./Fighter";
 import cloneDeep from "lodash.clonedeep";
@@ -153,7 +153,7 @@ export class Battle extends BaseBattle {
     const winEmbed = new EmbedBuilder()
       .setColor(GOLD)
       .setTitle("Battle Winner")
-      .setDescription(`${winner.name} has won the battle!`);
+      .setDescription(`${userMention(winner.id)} has won the battle!`);
 
     if (winner.imageUrl)
       winEmbed.setThumbnail(winner.imageUrl);

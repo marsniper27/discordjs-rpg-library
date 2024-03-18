@@ -173,6 +173,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
 
         // Example end handling (placeholder)
         if (collected.size < 2) { // Adjust according to your minimum players requirement
+            interaction.editReply({components:[]})
             const embed3 = new EmbedBuilder()
                 .setTitle( `Narrator: Well that was disappointing...` )
                 .setColor(0x2f3136)
