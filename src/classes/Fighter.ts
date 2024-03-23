@@ -13,6 +13,7 @@ import {
   GREEN_CIRLE,
 } from "./utils";
 import { Weapon } from "./Weapon";
+import {findEntryByID} from "mars-simple-mongodb"
 
 /** 
  * Fighter is base class to be used in Battle. Only class derived from Fighter
@@ -26,7 +27,7 @@ import { Weapon } from "./Weapon";
  * }
  * ```
  * */
-export class Fighter extends Base {
+export class Fighter {
   /** Fighter name */
   name: string;
   /** Fighter unique id */
@@ -45,7 +46,7 @@ export class Fighter extends Base {
   gamesPlayed =0;
   gamesWon=0;
   coins=10;
-  supercoins=0;
+  superCoins=0;
   level=1;
   xp=0;
   /** Array of equipped armors */
@@ -60,7 +61,7 @@ export class Fighter extends Base {
   imageUrl?: string;
 
   constructor(name: string) {
-    super();
+    // super();
     this.name = name;
     this.id = name;
   }
@@ -86,7 +87,8 @@ export class Fighter extends Base {
    * MessageEmbed that represents this Fighter. Passing another Fighter in this
    * method will make comparison between this Fighter stat with the other 
    * */
-  show(fighter?: Fighter) {
+  async show(guild:String, fighter?: Fighter) {
+    const theme = await findEntryByID('theme','server',guild)
     const armor = formatPercent(this.armor);
     const critChance = formatPercent(this.critChance);
 
@@ -103,8 +105,8 @@ export class Fighter extends Base {
       .setColor(GOLD)
       .setFields([
         { name: "Name", value: this.name },
-        { name: "Coins", value: inlineCode(Math.round(this.coins).toString()), inline: true },
-        { name: "Supercoins", value: inlineCode(Math.round(this.supercoins).toString()), inline: true },
+        { name: `${theme.coinName}`, value: inlineCode(Math.round(this.coins).toString()), inline: true },
+        { name: `${theme.supercoinName}`, value: inlineCode(Math.round(this.superCoins).toString()), inline: true },
         { name: "Level", value: inlineCode(`${this.level || 0}`), inline: true },
         { name: "XP", value: inlineCode(`${this.xp || 0}`), inline: true },
         { name: "Attack", value: inlineCode(Math.round(this.attack).toString()), inline: true },

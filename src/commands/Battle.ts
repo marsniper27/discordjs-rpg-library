@@ -4,7 +4,8 @@ import { Battle } from "../classes/Battle";
 // import { Dragon } from "../classes/Pet";
 import { Player } from "../classes/Player";
 // import { Rage } from "../classes/Skill";
-import { incrementFields } from "../utils/db"
+// import { incrementFields } from "../utils/db"
+import { incrementFields } from "mars-simple-mongodb"; // Adjust the import path as necessary
 
 module.exports = {
 	data: new SlashCommandBuilder()

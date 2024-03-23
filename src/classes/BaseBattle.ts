@@ -84,12 +84,15 @@ export abstract class BaseBattle {
     const healthBar = this.bar(hp, maxHP);
     const remainingHP = hp >= 0 ? Math.round(hp) : 0;
 
-    embed.addFields([
-      { 
-        name: `${name}'s remaining HP`,
-        value: `\`${healthBar}\` \`${remainingHP}/${maxHPStr}\``,
-      },
-    ]);
+    const description = (embed.data.description?embed.data.description:'') + `${name}'s remaining HP \n\`${healthBar}\` \`${remainingHP}/${maxHPStr}\`\n`;
+    embed.setDescription(description);
+
+    // embed.addFields([
+    //   { 
+    //     name: `${name}'s remaining HP`,
+    //     value: `\`${healthBar}\` \`${remainingHP}/${maxHPStr}\``,
+    //   },
+    // ]);
   }
 
   protected attack(p1: Fighter, p2: Fighter) {
@@ -103,14 +106,22 @@ export abstract class BaseBattle {
 
     const battleEmbed = new EmbedBuilder()
       .setColor(RED)
-      .setFields([
-        { name: "Attacking Player", value: p1.name, inline: true },
-        { name: "Defending Player", value: p2.name, inline: true },
-        { name: "Round", value: `\`${this.round.toString()}\``, inline: true },
-        { name: "Attack Rate", value: `\`${Math.round(attackRate)}${critText}\``, inline: true },
-        { name: "Damage Reduction", value: `\`${Math.round(armorProtection)}\``, inline: true },
-        { name: "Damage Done", value: `\`${Math.round(damageDealt)}\``, inline: true },
-      ]);
+      .setDescription(
+        `Attacking Player ${p1.name}    `+
+        `Defending Player ${p2.name}\n`+
+        `Round \`${this.round.toString()}\`\n`+
+        `Attack Rate \`${Math.round(attackRate)}${critText}\`\n`+
+        `Damage Reduction \`${Math.round(armorProtection)}\`\n`+
+        `Damage Done \`${Math.round(damageDealt)}\`\n`
+      )
+      // .setFields([
+      //   { name: "Attacking Player", value: p1.name, inline: true },
+      //   { name: "Defending Player", value: p2.name, inline: true },
+      //   { name: "Round", value: `\`${this.round.toString()}\``, inline: true },
+      //   { name: "Attack Rate", value: `\`${Math.round(attackRate)}${critText}\``, inline: true },
+      //   { name: "Damage Reduction", value: `\`${Math.round(armorProtection)}\``, inline: true },
+      //   { name: "Damage Done", value: `\`${Math.round(damageDealt)}\``, inline: true },
+      // ]);
 
     if (p1.imageUrl)
       battleEmbed.setThumbnail(p1.imageUrl);

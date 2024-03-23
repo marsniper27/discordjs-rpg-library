@@ -1,5 +1,5 @@
 {
-  "name": "@jiman24/discordjs-rpg",
+  "name": "discordjs-rpg-library",
   "version": "5.3.0",
   "description": "discord rpg framework",
   "main": "dist/index.js",
@@ -27,6 +27,7 @@
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.5",
     "lodash.clonedeep": "^4.5.0",
+    "mars-simple-mongodb": "^0.1.0",
     "mongodb": "^6.5.0",
     "random-js": "^2.1.0"
   },

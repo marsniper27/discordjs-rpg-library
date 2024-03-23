@@ -4,7 +4,8 @@ import { Battle } from "../classes/Battle";
 import { Dragon } from "../classes/Pet";
 import { Player } from "../classes/Player";
 import { Rage } from "../classes/Skill";
-import { incrementFields,findEntryByID } from "../utils/db"
+// import { incrementFields,findEntryByID } from "../utils/db"
+import { findEntryByID, saveEntry, incrementFields } from "mars-simple-mongodb"; // Adjust the import path as necessary
 import { string } from "random-js";
 import { 
   RED_CIRCLE, 

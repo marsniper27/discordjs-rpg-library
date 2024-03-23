@@ -1,7 +1,8 @@
 // Importing necessary modules and types
 import { User } from "discord.js";
 import { Fighter } from "./Fighter";
-import { findEntryByID, saveEntry } from "../utils/db"; // Adjust the import path as necessary
+// import { findEntryByID, saveEntry } from "../utils/db"; // Adjust the import path as necessary
+import { findEntryByID, saveEntry } from "mars-simple-mongodb"; // Adjust the import path as necessary
 
 // Defining the PlayerData interface
 interface PlayerData {
@@ -14,7 +15,7 @@ interface PlayerData {
   gamesPlayed:number;
   gamesWon: number;
   coins: number;
-  supercoins: number;
+  superCoins: number;
   level: number;
   xp: number;
 }
@@ -35,7 +36,7 @@ export class Player extends Fighter {
     this.gamesWon = data.gamesWon;
     this.imageUrl = this.user.displayAvatarURL();
     this.coins = data.coins;
-    this.supercoins = data.supercoins;
+    this.superCoins = data.superCoins;
     this.level = data.level;
     this.xp = data.xp;
   }
@@ -51,21 +52,22 @@ export class Player extends Fighter {
 async function findOrCreatePlayerData(user: User, guildId: string): Promise<PlayerData> {
   let data = await findEntryByID('users', guildId, user.id); // Make sure the collection name and parameters are correct
   if (!data) {
+    const defaults = await findEntryByID('users', 'default', 'default');
     // Default values for a new player
-    const defaults: PlayerData = {
-      _id: user.id, // Use Discord user ID as the database document ID
-      attack: 10,
-      hp: 100,
-      armor: 0.1,
-      critChance: 0.3,
-      critDamage: 1.2,
-      gamesPlayed:0,
-      gamesWon:0,
-      coins: 10,
-      supercoins: 0,
-      level: 1,
-      xp: 0,
-    };
+    // const defaults: PlayerData = {
+    //   _id: user.id, // Use Discord user ID as the database document ID
+    //   attack: 10,
+    //   hp: 100,
+    //   armor: 0.1,
+    //   critChance: 0.3,
+    //   critDamage: 1.2,
+    //   gamesPlayed:0,
+    //   gamesWon:0,
+    //   coins: 10,
+    //   superCoins: 0,
+    //   level: 1,
+    //   xp: 0,
+    // };
     await saveEntry('users', guildId, defaults); // Assuming the collection name is 'users' and saveEntry can handle this structure
     data = defaults;
   }

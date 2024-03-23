@@ -5,7 +5,8 @@ import { Dragon } from "../classes/Pet";
 import { Player } from "../classes/Player";
 import { Rage } from "../classes/Skill";
 import { Sword } from "../classes/Weapon";
-import { saveEntry, findEntryByID} from '../utils/db';
+// import { saveEntry, findEntryByID} from '../utils/db';
+import { findEntryByID, saveEntry } from "mars-simple-mongodb"; // Adjust the import path as necessary
 
 
 module.exports = {
@@ -28,7 +29,7 @@ module.exports = {
         const sword = new Sword();
         player.equipWeapon(sword);
         
-        i.reply({ embeds: [player.show()] });
+        i.reply({ embeds: [await player.show(guild)] });
     }
 }
 

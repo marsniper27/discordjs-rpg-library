@@ -12,4 +12,5 @@ export abstract class Base {
   abstract id: string;
   /** MessageEmbed which represents the entity */
   abstract show(): EmbedBuilder;
+  // abstract showProfile(guild:String): Promise< EmbedBuilder>;
 }

@@ -1,6 +1,7 @@
 // Brawl.ts
-import { SlashCommandBuilder,Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember,User } from 'discord.js';
-import { findEntryByID,incrementFields } from '../utils/db';
+import { SlashCommandBuilder, Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User } from 'discord.js';
+// import { findEntryByID,incrementFields } from '../utils/db';
+import { findEntryByID, incrementFields } from "mars-simple-mongodb"; // Adjust the import path as necessary
 import { Player } from '../classes/Player';
 import { Battle } from '../classes/Battle';
 import { Mischief } from '../classes/Skill';
@@ -12,7 +13,8 @@ const fee = 1; // Assuming a fee for joining the brawl
 // Placeholder currency symbol
 const currency = '$';
 const battleSpeed = 2000;
-const waitTime = 90000; //90sec
+// const waitTime = 90000; //90sec
+let waitTime = 90000; // Default value
 const embedcolor = 0x2f3136;
 const brawlicon = "https://cdn.discordapp.com/attachments/980341286718558248/1092769990639353857/Mega-Armoured-Trial2.jpg";
 
@@ -20,74 +22,87 @@ let counterMessage: Message | null = null;
 
 
 export const data = new SlashCommandBuilder()
-  .setName('brawl')
-  .setDescription('All in - Last one standing wins!')
-  .addBooleanOption(option =>
-      option.setName('use_mischief')
-          .setDescription('Enable mischief'));
+    .setName('brawl')
+    .setDescription('All in - Last one standing wins!')
+    .addIntegerOption(option =>
+        option.setName('lead_time')
+            .setDescription('Countdown time before brawl starts in minutes (defualt is 1.5mins'))
+    .addBooleanOption(option =>
+        option.setName('use_mischief')
+            .setDescription('Enable mischief'));
 
 export async function execute(interaction: CommandInteraction): Promise<void> {
-  if (!interaction.guildId ||  !interaction.inGuild()) {
-    await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
-    return;
-  }
-  if (!interaction.channel) {
-    await interaction.reply({ content: 'This command can only be used in a channel.', ephemeral: true });
-    return;
-}
-// Safely attempt to retrieve and use the boolean option value
-    const booleanOption = interaction.options.data.find(option => option.name === 'use_mischief');
-    const useMischief = booleanOption ? booleanOption.value : false; 
-  const brawlStarter = interaction.user;
-  const guildId = interaction.guildId;
-  const players: Player[] = []; // This will hold the Player instances
-  let playerjoined = ''; // Track which players have joined
-
-  const brawlEmbed = new EmbedBuilder()
-    .setTitle('Gargoyle Brawl')
-    .setDescription('The brawl is about to begin! Prepare yourself.')
-    .setColor(0x2F3136)
-    .setThumbnail(brawlicon); // Replace with your actual image URL
-
-  const joinButton = new ActionRowBuilder<ButtonBuilder>()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId('join_brawl')
-        .setLabel('Join')
-        .setStyle(ButtonStyle.Success),
-    );
-
-  await interaction.reply({ embeds: [brawlEmbed], components: [joinButton] });
-  //this message is where the players list is added as they join
-  let playermessage = await interaction.channel.send(`😈`);
-
-  // Setup a collector or listener for button interaction
-  const filter = (i :MessageComponentInteraction) => i.customId === 'join_brawl' && i.user.id !== interaction.client.user?.id;
-  const collector = interaction.channel.createMessageComponentCollector({ filter, time: waitTime }); // Adjust time as necessary
-
-  collector.on('collect', async i => {
-    if (!i.member ) {
-        console.log('member not found')
+    if (!interaction.guildId || !interaction.inGuild()) {
+        await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
         return;
     }
-    const member = i.member as GuildMember;
-    const user = member.user;
-    if(!i.channel){return}
+    if (!interaction.channel) {
+        await interaction.reply({ content: 'This command can only be used in a channel.', ephemeral: true });
+        return;
+    }
+    // Safely attempt to retrieve and use the boolean option value
+    const booleanOption = interaction.options.data.find(option => option.name === 'use_mischief');
+    const leadTimeOption = interaction.options.get('lead_time');
+    if (leadTimeOption && typeof leadTimeOption.value === 'number') {
+        waitTime = leadTimeOption.value * 60000;
+    }
+    const useMischief = booleanOption ? booleanOption.value : false;
+    const brawlStarter = interaction.user;
+    const guildId = interaction.guildId;
+    const players: Player[] = []; // This will hold the Player instances
+    let playerjoined = ''; // Track which players have joined
+
+    const brawlEmbed = new EmbedBuilder()
+        .setTitle('Gargoyle Brawl')
+        .setDescription('The brawl is about to begin! Prepare yourself.')
+        .addFields([
+              { 
+                name: `Countdown Time:`,
+                value: `${waitTime}`,
+              },
+            ])
+        .setColor(0x2F3136)
+        .setThumbnail(brawlicon); // Replace with your actual image URL
+
+    const joinButton = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('join_brawl')
+                .setLabel('Join')
+                .setStyle(ButtonStyle.Success),
+        );
+
+    await interaction.reply({ embeds: [brawlEmbed], components: [joinButton] });
+    //this message is where the players list is added as they join
+    let playermessage = await interaction.channel.send(`😈`);
+
+    // Setup a collector or listener for button interaction
+    const filter = (i: MessageComponentInteraction) => i.customId === 'join_brawl' && i.user.id !== interaction.client.user?.id;
+    const collector = interaction.channel.createMessageComponentCollector({ filter, time: waitTime }); // Adjust time as necessary
+
+    collector.on('collect', async i => {
+        if (!i.member) {
+            console.log('member not found')
+            return;
+        }
+        const member = i.member as GuildMember;
+        const user = member.user;
+        if (!i.channel) { return }
         if (i.customId === 'join_brawl') {
             const user = await i.user.fetch();
-            if (players.find(player => player.name === user.username)){
-                i.reply({content:'You have already joined the brawl!', ephemeral:true})
+            if (players.find(player => player.name === user.username)) {
+                i.reply({ content: 'You have already joined the brawl!', ephemeral: true })
                 return;
             }
-            const playerData  = await findEntryByID("users", interaction.guildId, member.id)
+            const playerData = await findEntryByID("users", interaction.guildId, member.id)
             let player;
             //if user exists then join the game, if not create a user and then join
-            if (playerData ) {
-                if(playerData.coins < fee) {
+            if (playerData) {
+                if (playerData.coins < fee) {
                     await interaction.reply({ content: "You do not have enough coins to join!", ephemeral: true });
                     return;
                 }
-                player = await Player.createInstance(user,guildId);
+                player = await Player.createInstance(user, guildId);
                 //add coins temporarily - remove this later
                 //        player.coins =+ newplayercoins;
 
@@ -112,7 +127,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 //add player to players list for this game
                 //	sendEmbed(msg, player.show());
             } else {
-                player =  await Player.createInstance(user, guildId);
+                player = await Player.createInstance(user, guildId);
                 player.skill = useMischief ? new Mischief() : undefined;
                 // player.coins = + newplayercoins; //new players get free coins
                 i.channel.send(`Welcome to your first Brawl ${user.username}`);
@@ -149,7 +164,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             } else {
                 playerjoined += `👤  **${user.username}**\n`;
             }
-                
+
 
             //tzi
             let playercounttext;
@@ -162,27 +177,27 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             await playermessage.edit({ content: `**The following players have joined the Brawl:**\n\n ${playerjoined} \n\n ${playercounttext}`, components: [] });
             // interaction.editReply({components:[]})
         }
-        
+
         await i.deferUpdate();
     });
 
-    collector?.on('end', async collected => {   
-        if(counterMessage) await counterMessage.delete().catch(console.error);
+    collector?.on('end', async collected => {
+        if (counterMessage) await counterMessage.delete().catch(console.error);
         // Handle the end of the collection period, e.g., start the brawl with the collected players
         // This might involve checking if enough players have joined, initializing a Battle instance, etc.
 
         // Example end handling (placeholder)
         if (collected.size < 2) { // Adjust according to your minimum players requirement
-            interaction.editReply({components:[]})
+            interaction.editReply({ components: [] })
             const embed3 = new EmbedBuilder()
-                .setTitle( `Narrator: Well that was disappointing...` )
+                .setTitle(`Narrator: Well that was disappointing...`)
                 .setColor(0x2f3136)
                 .setThumbnail("https://cdn.discordapp.com/attachments/969609321610637392/1093501354485485588/haha.jpg")
                 .setDescription(
                     `${brawlStarter} tried to start a brawl, but nobody showed up! 🤣`
                 );
 
-            await interaction.followUp({embeds:[embed3]});
+            await interaction.followUp({ embeds: [embed3] });
             return;
             // await interaction.followUp({ content: "Not enough players joined the brawl.", ephemeral: true });
         } else {
@@ -193,18 +208,18 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             battle.setInterval(battleSpeed);
             //--------------------------
             const winner = await battle.run();
-        
+
             const reward = fee * players.length;
-        
+
             const embed2 = new EmbedBuilder()
                 .setColor(GOLD)
-                .setTitle(`${winner.name} IS THE WINNER!` )
+                .setTitle(`${winner.name} IS THE WINNER!`)
                 //      .setTitle("Narrator")
                 .setDescription(`Out of ${players.length} players, ${bold(winner.name)} won the Brawl and walked away with ${reward} ${currency}!`);
             //      .appendDescription(`\n*Psst ${msg.author.toString()}*`);
-            await interaction.followUp({embeds:[embed2]});
+            await interaction.followUp({ embeds: [embed2] });
             try {
-                for(const brawler of players){
+                for (const brawler of players) {
                     await incrementFields('users', interaction.guildId, brawler.id, { gamesPlayed: 1 });
                     await incrementFields('users', interaction.guildId, brawler.id, { coins: -fee });
                 }
@@ -264,80 +279,86 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     var jump = playermessage.url;
     async function updateCounterMessage(embed: EmbedBuilder[]) {
         if (!counterMessage) {
-          // If counterMessage does not exist, send a new message and assign it to counterMessage
-          counterMessage = await interaction.followUp({ embeds:embed, fetchReply: true }) as Message;
+            // If counterMessage does not exist, send a new message and assign it to counterMessage
+            counterMessage = await interaction.followUp({ embeds: embed, fetchReply: true }) as Message;
         } else {
-          // If counterMessage exists, edit it with the new embeds
-          await counterMessage.edit({ embeds:embed });
+            // If counterMessage exists, edit it with the new embeds
+            await counterMessage.edit({ embeds: embed });
         }
-      }
-      
+    }
 
-    setTimeout(async() => {
-        const embed5 = new EmbedBuilder()
-            .setColor(embedcolor)
-            .setAuthor({ name: `Someone is trying to start a brawl!` })
+    if (waitTime >= 9000) {
+        setTimeout(async () => {
+            const embed5 = new EmbedBuilder()
+                .setColor(embedcolor)
+                .setAuthor({ name: `Someone is trying to start a brawl!` })
 
-            // .setTitle("Brawl")
-            .setThumbnail(brawlicon)
-            //      .setDescription(`You have 60sec to join`);
-            .setDescription(`${Responses90[Response90]}`)
-            .addFields({ name:`[JOIN THE BRAWL]`, value:`${jump}`});
+                // .setTitle("Brawl")
+                .setThumbnail(brawlicon)
+                //      .setDescription(`You have 60sec to join`);
+                .setDescription(`${Responses90[Response90]}`)
+                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
 
-        await updateCounterMessage([embed5]);
-        //	msg.channel.send("Brawl starts in 60sec")
-    }, (waitTime - 90000));
+            await updateCounterMessage([embed5]);
+            //	msg.channel.send("Brawl starts in 60sec")
+        }, (waitTime - 90000));
+    }
 
-    setTimeout(async() => {
-        // if(counterMessage) await counterMessage.delete().catch(console.error);
-        const embed5 = new EmbedBuilder()
-            .setColor(embedcolor)
-            .setAuthor({ name: `Someone is trying to start a brawl!` })
+    if (waitTime >= 6000) {
+        setTimeout(async () => {
+            // if(counterMessage) await counterMessage.delete().catch(console.error);
+            const embed5 = new EmbedBuilder()
+                .setColor(embedcolor)
+                .setAuthor({ name: `Someone is trying to start a brawl!` })
 
-            // .setTitle("Brawl")
-            .setThumbnail(brawlicon)
-            //      .setDescription(`You have 60sec to join`);
-            .setDescription(`${Responses60[Response60]}`)
-            .addFields({ name:`[JOIN THE BRAWL]`, value:`${jump}`});
+                // .setTitle("Brawl")
+                .setThumbnail(brawlicon)
+                //      .setDescription(`You have 60sec to join`);
+                .setDescription(`${Responses60[Response60]}`)
+                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
 
-        await updateCounterMessage([embed5]);
-        //	msg.channel.send("Brawl starts in 60sec")
-    }, (waitTime - 60000));
+            await updateCounterMessage([embed5]);
+            //	msg.channel.send("Brawl starts in 60sec")
+        }, (waitTime - 60000));
+    }
 
+    if (waitTime >= 3000) {
+        setTimeout(async () => {
+            // if(counterMessage) await counterMessage.delete().catch(console.error);
+            const embed5 = new EmbedBuilder()
+                .setColor(embedcolor)
+                .setAuthor({ name: `Someone is trying to start a brawl!` })
 
-    setTimeout(async() => {
-        // if(counterMessage) await counterMessage.delete().catch(console.error);
-        const embed5 = new EmbedBuilder()
-            .setColor(embedcolor)
-            .setAuthor({ name: `Someone is trying to start a brawl!` })
+                // .setTitle("Brawl")
+                .setThumbnail(brawlicon)
+                //      .setDescription(`...30sec left to join`);
+                .setDescription(`${Responses30[Response30]}`)
+                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
 
-            // .setTitle("Brawl")
-            .setThumbnail(brawlicon)
-            //      .setDescription(`...30sec left to join`);
-            .setDescription(`${Responses30[Response30]}`)
-            .addFields({ name:`[JOIN THE BRAWL]`, value:`${jump}`});
+            await updateCounterMessage([embed5]);
 
-        await updateCounterMessage([embed5]);
+            //	msg.channel.send("Brawl starts in 30sec")
+        }, (waitTime - 30000));
+    }
 
-        //	msg.channel.send("Brawl starts in 30sec")
-    }, (waitTime - 30000));
+    if (waitTime >= 1000) {
+        setTimeout(async () => {
+            // if(counterMessage) await counterMessage.delete().catch(console.error);
+            const embed5 = new EmbedBuilder()
+                .setColor(embedcolor)
+                .setAuthor({ name: `Someone is trying to start a brawl!` })
 
-    setTimeout(async() => {
-        // if(counterMessage) await counterMessage.delete().catch(console.error);
-        const embed5 = new EmbedBuilder()
-            .setColor(embedcolor)
-            .setAuthor({ name: `Someone is trying to start a brawl!` })
+                // .setTitle("Brawl")
+                .setThumbnail(brawlicon)
+                //      .setDescription(`...10sec left to join!`);
+                .setDescription(`${Responses10[Response10]}`)
+                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
 
-            // .setTitle("Brawl")
-            .setThumbnail(brawlicon)
-            //      .setDescription(`...10sec left to join!`);
-            .setDescription(`${Responses10[Response10]}`)
-            .addFields({ name:`[JOIN THE BRAWL]`, value:`${jump}`});
+            await updateCounterMessage([embed5]);
 
-        await updateCounterMessage([embed5]);
-
-        //	msg.channel.send("Brawl starts in 10sec")
-    }, (waitTime - 10000));
+            //	msg.channel.send("Brawl starts in 10sec")
+        }, (waitTime - 10000));
+    }
 
 };
 
