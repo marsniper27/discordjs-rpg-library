@@ -9,7 +9,7 @@ interface PlayerData {
   _id: string; // Assuming _id is used as the identifier in your database schema
   attack: number;
   hp: number;
-  armor: number;
+  naturalArmor: number;
   critChance: number;
   critDamage: number;
   gamesPlayed:number;
@@ -29,7 +29,7 @@ export class Player extends Fighter {
     this.id = user.id;
     this.attack = data.attack;
     this.hp = data.hp;
-    this.armor = data.armor;
+    this.naturalArmor = data.naturalArmor;
     this.critChance = data.critChance;
     this.critDamage = data.critDamage;
     this.gamesPlayed = data.gamesPlayed;

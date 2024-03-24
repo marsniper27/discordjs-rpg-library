@@ -98,7 +98,7 @@ export abstract class BaseBattle {
   protected attack(p1: Fighter, p2: Fighter) {
     const isCrit = p1.isCrit();
     const attackRate = isCrit ? p1.attack * p1.critDamage : p1.attack;
-    const armorProtection = p2.armor * attackRate;
+    const armorProtection = p2.naturalArmor * attackRate;
     const damageDealt = attackRate - armorProtection;
     const critText = isCrit ? ` (x${p1.critDamage.toFixed(1)}) 🔥` : "";
 

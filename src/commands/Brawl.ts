@@ -116,7 +116,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 player.xp = 0;
                 player.hp = 100;
                 player.attack = 10;
-                player.armor = 0.1;
+                player.naturalArmor = 0.1;
                 player.critChance = 0.3;
                 player.critDamage = 1.2;
                 player.pet = undefined;

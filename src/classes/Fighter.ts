@@ -37,7 +37,7 @@ export class Fighter {
   /** Fighter's health point */
   hp = 100;
   /** Amount of damage blocked when Fighter gets attacked*/
-  armor = 0.1;
+  naturalArmor = 0.1;
   /** Percentage to get critical attack */
   critChance = 0.3;
   /** Critical attack percentage increment */
@@ -68,7 +68,7 @@ export class Fighter {
 
   /** Add new armor to the user */
   equipArmor(armor: Armor) {
-    this.armor += armor.armor;
+    this.naturalArmor += armor.armor;
     this.equippedArmors.push(armor);
   }
 
@@ -89,7 +89,7 @@ export class Fighter {
    * */
   async show(guild:String, fighter?: Fighter) {
     const theme = await findEntryByID('theme','server',guild)
-    const armor = formatPercent(this.armor);
+    const armor = formatPercent(this.naturalArmor);
     const critChance = formatPercent(this.critChance);
 
     const armorList = this.equippedArmors
@@ -148,7 +148,7 @@ export class Fighter {
         i++;
       }
 
-      const fields2 = ["armor", "critChance"] as const;
+      const fields2 = ["naturalArmor", "critChance"] as const;
       for (const field of fields2) {
 
         const monsterStat = this[field];
