@@ -52,10 +52,10 @@ export class Player extends Fighter {
 async function findOrCreatePlayerData(user: User, guildId: string): Promise<PlayerData> {
   let data = await findEntryByID('users', guildId, user.id); // Make sure the collection name and parameters are correct
   if (!data) {
-    const defaults = await findEntryByID('users', 'default', 'default');
+    let defaults = await findEntryByID('users', 'defaults', 'default');
     // Default values for a new player
     // const defaults: PlayerData = {
-    //   _id: user.id, // Use Discord user ID as the database document ID
+      defaults._id= user.id; // Use Discord user ID as the database document ID
     //   attack: 10,
     //   hp: 100,
     //   armor: 0.1,

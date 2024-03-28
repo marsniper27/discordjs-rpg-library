@@ -9,8 +9,8 @@ import { incrementFields } from "mars-simple-mongodb"; // Adjust the import path
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('battle')
-		.setDescription('Initiates a battle with another player')
+		.setName('duel')
+		.setDescription('Initiates a duel with another player')
         .addUserOption(option => 
           option
             .setName("opponent")

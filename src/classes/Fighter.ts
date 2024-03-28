@@ -105,8 +105,8 @@ export class Fighter {
       .setColor(GOLD)
       .setFields([
         { name: "Name", value: this.name },
-        { name: `${theme.coinName}`, value: inlineCode(Math.round(this.coins).toString()), inline: true },
-        { name: `${theme.supercoinName}`, value: inlineCode(Math.round(this.superCoins).toString()), inline: true },
+        { name: `${theme.coinName?theme.coinName:'Copper'}`, value: inlineCode(Math.round(this.coins).toString()), inline: true },
+        { name: `${theme.supercoinName?theme.supercoinName:'Gold'}`, value: inlineCode(Math.round(this.superCoins).toString()), inline: true },
         { name: "Level", value: inlineCode(`${this.level || 0}`), inline: true },
         { name: "XP", value: inlineCode(`${this.xp || 0}`), inline: true },
         { name: "Attack", value: inlineCode(Math.round(this.attack).toString()), inline: true },

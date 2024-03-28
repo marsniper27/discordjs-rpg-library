@@ -24,9 +24,9 @@ let counterMessage: Message | null = null;
 export const data = new SlashCommandBuilder()
     .setName('brawl')
     .setDescription('All in - Last one standing wins!')
-    .addIntegerOption(option =>
+    .addNumberOption(option =>
         option.setName('lead_time')
-            .setDescription('Countdown time before brawl starts in minutes (defualt is 1.5mins'))
+            .setDescription('Countdown time before brawl starts in minutes (default is 1.5mins)'))
     .addBooleanOption(option =>
         option.setName('use_mischief')
             .setDescription('Enable mischief'));
@@ -68,19 +68,31 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         .addComponents(
             new ButtonBuilder()
                 .setCustomId('join_brawl')
-                .setLabel('Join')
+                .setLabel('---> Join <---')
                 .setStyle(ButtonStyle.Success),
         );
 
     await interaction.reply({ embeds: [brawlEmbed], components: [joinButton] });
     //this message is where the players list is added as they join
     let playermessage = await interaction.channel.send(`😈`);
+    
+    let timeLeft = waitTime/1000;
+    const countdownMessage = await interaction.channel.send(`${timeLeft} seconds remaining`);
+    const countdown = setInterval(() => {
+        timeLeft--;
+        countdownMessage.edit(`${timeLeft} seconds remaining`);
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            countdownMessage.edit("Time's Up!");
+        }
+    }, 1000);
 
     // Setup a collector or listener for button interaction
     const filter = (i: MessageComponentInteraction) => i.customId === 'join_brawl' && i.user.id !== interaction.client.user?.id;
     const collector = interaction.channel.createMessageComponentCollector({ filter, time: waitTime }); // Adjust time as necessary
 
     collector.on('collect', async i => {
+        // await i.deferReply({ephemeral: true} )
         if (!i.member) {
             console.log('member not found')
             return;
@@ -91,7 +103,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         if (i.customId === 'join_brawl') {
             const user = await i.user.fetch();
             if (players.find(player => player.name === user.username)) {
-                i.reply({ content: 'You have already joined the brawl!', ephemeral: true })
+                i.reply({ content: 'You have already joined the brawl!',ephemeral:true})
                 return;
             }
             const playerData = await findEntryByID("users", interaction.guildId, member.id)
@@ -99,7 +111,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             //if user exists then join the game, if not create a user and then join
             if (playerData) {
                 if (playerData.coins < fee) {
-                    await interaction.reply({ content: "You do not have enough coins to join!", ephemeral: true });
+                    await i.reply({ content: "You do not have enough coins to join!",ephemeral:true});
                     return;
                 }
                 player = await Player.createInstance(user, guildId);
@@ -126,11 +138,12 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 // player.equippedItems = [];
                 //add player to players list for this game
                 //	sendEmbed(msg, player.show());
+                i.reply({content:`You joined the Brawl`,ephemeral:true});
             } else {
                 player = await Player.createInstance(user, guildId);
                 player.skill = useMischief ? new Mischief() : undefined;
                 // player.coins = + newplayercoins; //new players get free coins
-                i.channel.send(`Welcome to your first Brawl ${user.username}`);
+                i.reply({ content:`Welcome to your first Brawl ${user.username}`,ephemeral:true});
             }
 
             players.push(player); //adds player to the players list
@@ -178,7 +191,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             // interaction.editReply({components:[]})
         }
 
-        await i.deferUpdate();
+ //       await i.deferUpdate();
     });
 
     collector?.on('end', async collected => {
@@ -287,7 +300,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         }
     }
 
-    if (waitTime >= 9000) {
+    if (waitTime == 90000) {
         setTimeout(async () => {
             const embed5 = new EmbedBuilder()
                 .setColor(embedcolor)
@@ -304,7 +317,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         }, (waitTime - 90000));
     }
 
-    if (waitTime >= 6000) {
+    if (waitTime == 60000) {
         setTimeout(async () => {
             // if(counterMessage) await counterMessage.delete().catch(console.error);
             const embed5 = new EmbedBuilder()
@@ -322,7 +335,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         }, (waitTime - 60000));
     }
 
-    if (waitTime >= 3000) {
+    if (waitTime == 30000) {
         setTimeout(async () => {
             // if(counterMessage) await counterMessage.delete().catch(console.error);
             const embed5 = new EmbedBuilder()
@@ -341,7 +354,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         }, (waitTime - 30000));
     }
 
-    if (waitTime >= 1000) {
+    if (waitTime == 10000) {
         setTimeout(async () => {
             // if(counterMessage) await counterMessage.delete().catch(console.error);
             const embed5 = new EmbedBuilder()
