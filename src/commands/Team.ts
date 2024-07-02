@@ -1,6 +1,6 @@
 // import { Command } from "@jiman24/slash-commandment";
 
-import { SlashCommandBuilder,CommandInteraction } from "discord.js";
+import { SlashCommandBuilder,CommandInteraction, GuildTextBasedChannel } from "discord.js";
 import { Fighter } from "../classes/Fighter";
 import { TeamBattle } from "../classes/TeamBatle";
 
@@ -19,10 +19,11 @@ module.exports = {
       name: "Anti-Jaegerist",
       fighters: [new Fighter("jean"), new Fighter("annie")],
     }
+    if(i.channel != null){
+      const battle = new TeamBattle(i.channel as GuildTextBasedChannel, teamA, teamB);
 
-    const battle = new TeamBattle(i, teamA, teamB);
-
-    await battle.run();
+      await battle.run();
+}
   }
 }
 

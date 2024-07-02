@@ -1,4 +1,4 @@
-import { EmbedBuilder, CommandInteraction,Message } from "discord.js";
+import { EmbedBuilder, CommandInteraction,Message, GuildTextBasedChannel } from "discord.js";
 import { RED, sleep } from "./utils";
 import { Fighter } from "./Fighter";
 
@@ -9,7 +9,8 @@ interface PlayerGameStat {
 
 export abstract class BaseBattle {
   protected round = 0;
-  protected i: CommandInteraction;
+  // protected i: CommandInteraction;
+  protected channel: GuildTextBasedChannel;
   protected fighters: Fighter[];
   protected gameStats: Map<string, PlayerGameStat> = new Map();
   protected playerDiedText?: (fighter: Fighter) => string;
@@ -24,12 +25,17 @@ export abstract class BaseBattle {
   /** Reference to the battle message for updates */
   private battleMessage: Message | null = null;
 
+   //@param {CommandInteraction} i - discord.js's CommandInteraction
   /** 
-   * @param {CommandInteraction} i - discord.js's CommandInteraction
+   * @param {GuildTextBasedChannel} channel - discord.js's CommandInteraction
    * @param {Fighter[]} fighters - array of Fighter's object
    * */
-  constructor(i: CommandInteraction, fighters: Fighter[]) {
-    this.i = i;
+  // constructor(i: CommandInteraction, fighters: Fighter[]) {
+  //   this.i = i;
+  //   this.fighters = [...new Set(fighters)];
+  // }
+  constructor(channel: GuildTextBasedChannel, fighters: Fighter[]) {
+    this.channel = channel;
     this.fighters = [...new Set(fighters)];
   }
 
@@ -68,7 +74,8 @@ export abstract class BaseBattle {
     if (this.battleMessage) {
       await this.battleMessage.edit(content);
     } else {
-      this.battleMessage = await this.i.followUp(content);
+      // this.battleMessage = await this.i.followUp(content);
+      this.battleMessage = await this.channel.send(content);
       // if (sentMessage instanceof Message) {
       //   this.battleMessage = sentMessage;
       // }

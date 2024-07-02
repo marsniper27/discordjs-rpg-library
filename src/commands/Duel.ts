@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, CommandInteraction } from "discord.js";
+import { SlashCommandBuilder, CommandInteraction, GuildTextBasedChannel } from "discord.js";
 // import { Chest } from "../classes/Armor";
 import { Battle } from "../classes/Battle";
 // import { Dragon } from "../classes/Pet";
@@ -19,13 +19,18 @@ module.exports = {
         ),
 	async execute(i: CommandInteraction) {
         // Ensure the command is used in a guild context
+        if (!i.guild) {
+          i.reply({ content: "This command can only be used in a server.", ephemeral: true });
+          return;
+        }
         if (!i.guildId) {
           i.reply({ content: "This command can only be used in a server.", ephemeral: true });
           return;
         }
 
         const author = await Player.createInstance(i.user, i.guildId);
-        const opponent = i.options.getUser("opponent");
+        // const opponentOption = i.options.data.find(option => option.name === 'opponent');
+        const opponent = i.options.get('opponent')?.user;
 
         if (!opponent) {
           throw new Error("Please mention your opponent(s)");
@@ -41,18 +46,21 @@ module.exports = {
         // author.equipArmor(chest);
 
         const opponentPlayer = await Player.createInstance(opponent, i.guildId);
-        const battle = new Battle(i, [author, opponentPlayer]);
-        try {
-            await incrementFields('users', i.guildId, i.user.id, { gamesPlayed: 1 });
-            await incrementFields('users', i.guildId, opponentPlayer.id, { gamesPlayed: 1 });
-          
-            const winner = await battle.run();
-            await incrementFields('users', i.guildId, winner.id, { gamesWon: 1 });
-        } catch (error) {
-            console.error("Failed to update player stats", error);
-            await i.followUp("There was an issue updating player stats. Please try again later.");
+        const channel = i.guild.channels.cache.get(i.guildId)as GuildTextBasedChannel
+        if(channel != null){
+          const battle = new Battle(channel, [author, opponentPlayer]);
+          try {
+              await incrementFields('users', i.guildId, i.user.id, { gamesPlayed: 1 });
+              await incrementFields('users', i.guildId, opponentPlayer.id, { gamesPlayed: 1 });
+            
+              const winner = await battle.run();
+              await incrementFields('users', i.guildId, winner.id, { gamesWon: 1 });
+          } catch (error) {
+              console.error("Failed to update player stats", error);
+              await i.followUp("There was an issue updating player stats. Please try again later.");
+          }
         }
-    }
+      }
 };
 
 // export default class BattleCommand extends SlashCommandBuilder {

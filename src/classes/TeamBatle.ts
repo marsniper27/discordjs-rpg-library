@@ -1,4 +1,4 @@
-import { CommandInteraction, EmbedBuilder } from "discord.js";
+import { CommandInteraction, EmbedBuilder, GuildTextBasedChannel } from "discord.js";
 import { Fighter } from "./Fighter";
 import { BaseBattle } from "./BaseBattle";
 import cloneDeep from "lodash.clonedeep";
@@ -22,8 +22,10 @@ export class TeamBattle extends BaseBattle {
    * @param {Team} teamA - team
    * @param {Team} teamB - team
    * */
-  constructor(i: CommandInteraction, teamA: Team, teamB: Team) {
-    super(i, [...teamA.fighters, ...teamB.fighters]);
+  // constructor(i: CommandInteraction, teamA: Team, teamB: Team) {
+  //   super(i, [...teamA.fighters, ...teamB.fighters]);
+  constructor(channel: GuildTextBasedChannel, teamA: Team, teamB: Team) {
+      super(channel, [...teamA.fighters, ...teamB.fighters]);
 
     this.teamA = { ...teamA, fighters: teamA.fighters.map(x => cloneDeep(x)) };
     this.teamB = { ...teamB, fighters: teamB.fighters.map(x => cloneDeep(x)) };

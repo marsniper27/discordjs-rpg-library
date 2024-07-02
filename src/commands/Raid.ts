@@ -1,6 +1,6 @@
 // import { Command } from "@jiman24/slash-commandment";
 
-import { SlashCommandBuilder,CommandInteraction } from "discord.js";
+import { SlashCommandBuilder,CommandInteraction, GuildTextBasedChannel } from "discord.js";
 import { Chest } from "../classes/Armor";
 import { Battle } from "../classes/Battle";
 import { Dragon } from "../classes/Pet";
@@ -40,11 +40,14 @@ module.exports = {
     const chest = new Chest();
     author.equipArmor(chest);
 
-    const battle = new Battle(i, [author, boss, ...bots]);
+    if(i.channel != null){
+      const battle = new Battle(i.channel as GuildTextBasedChannel, [author, boss, ...bots]);
 
-    battle.setBoss(boss);
+      battle.setBoss(boss);
 
-    await battle.run();
+      await battle.run();
+    }
+
     }
 }
 

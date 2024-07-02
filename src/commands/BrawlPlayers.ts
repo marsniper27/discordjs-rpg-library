@@ -1,4 +1,4 @@
-// Brawl.ts
+// BrawlPlayers.ts
 import { SlashCommandBuilder , Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options } from 'discord.js';
 // import { findEntryByID,incrementFields } from '../utils/db';
 import { findEntryByID, incrementFields } from "mars-simple-mongodb"; // Adjust the import path as necessary
@@ -15,15 +15,60 @@ const currency = '$';
 const battleSpeed = 2000;
 // const waitTime = 90000; //90sec
 let waitTime = 90000; // Default value
+let minPlayers = 5;
 const embedcolor = 0x2f3136;
 const brawlicon = "https://cdn.discordapp.com/attachments/980341286718558248/1092769990639353857/Mega-Armoured-Trial2.jpg";
 
 let counterMessage: Message | null = null;
 
 
-export const data:any = new SlashCommandBuilder()
-    .setName('brawl')
+
+
+let Responses90 = [
+    `More time than normal... A Gargoyle must've been messing with time crystals again!\n\n ⏱**90 seconds to go** <@&956462114451640351>.`,
+    `90sec, wow! Best hit that button early.\n\n ⏱**90 seconds to go** <@&956462114451640351>.`,
+    `Sip your coffee, theres plenty of time left\n\n ⏱**90 seconds to go** <@&956462114451640351>.`,
+];
+
+let Responses60 = [
+    `Twiddle your thumbs and whistle to the tune of violence.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
+    `Slap your cheeks and stretch your wings.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
+    `Take out your whetstone and throw it away. It'll be more fun with a blunt weapon.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
+    `Step on your neighbor's foot because that'll give you an advantage later on.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
+    `Stand around impatiently for the battle to start.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
+    `Kick your Narrator for good luck.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`
+];
+
+
+
+let Responses30 = [
+    `Let the sense of impending combat fuel your warrior instinct.\n\n ⏱**30 seconds to go.**`,
+    `Close your eyes and let imaginary power course through your veins. Who knows, it might help.\n\n ⏱**30 seconds to go.**`,
+    `Practice by trying to stab your neighbor with your favorite weapon.\n\n ⏱**30 seconds to go.**`,
+    `Time has never before moved so slowly as you stay motionless, anticipating the big event.\n\n ⏱**30 seconds to go.**`,
+    `Today is the day that you'll finally win. Right?\n\n ⏱**30 seconds to go.**`,
+    `Wipe that saliva off your face! That <:ruin:985150753339494401> isn't yours yet.\n\n ⏱**30 seconds to go.**`
+];
+
+
+let Responses10 = [
+    `That's enough practice; take up positions.\n\n ⏱**10 seconds to go.**`,
+    `Step into the arena or be left standing at the sidelines watching your friends have fun.\n\n ⏱**10 seconds to go.**`,
+    `With high hopes and an empty stomach, you stand in the arena and mentally turn friend to foe.\n\n ⏱**10 seconds to go.**`,
+    `Suddenly time is going really fast for anyone who wants to join and is on their way here.\n\n ⏱**10 seconds to go.**`,
+    `⏱**10 seconds to go**\n\n 10. 9. 8. 7. 6. 5. Hey! Read slower! 4. 3. 2. 1.`,
+    `Grin menacingly and look around to strike fear into the other contestants.\n\n ⏱**10 seconds to go.**`,
+];
+
+
+export const data:any = new SlashCommandBuilder ()
+    .setName('brawl_players')
     .setDescription('All in - Last one standing wins!')
+    .addNumberOption(option =>
+        option.setName('min_players')
+            .setDescription('Number of players required before starting countdown')
+            .setRequired(true))
+        
     .addNumberOption(option =>
         option.setName('lead_time')
             .setDescription('Countdown time before brawl starts in minutes (default is 1.5mins)'))
@@ -41,8 +86,12 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         return;
     }
     // Safely attempt to retrieve and use the boolean option value
+    const minPlayersOption = interaction.options.get('min_players');
     const booleanOption = interaction.options.data.find(option => option.name === 'use_mischief');
     const leadTimeOption = interaction.options.get('lead_time');
+    if (minPlayersOption && typeof minPlayersOption.value === 'number') {
+        minPlayers = minPlayersOption.value;
+    }
     if (leadTimeOption && typeof leadTimeOption.value === 'number') {
         waitTime = leadTimeOption.value * 60000;
     }
@@ -56,6 +105,10 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         .setTitle('Gargoyle Brawl')
         .setDescription('The brawl is about to begin! Prepare yourself.')
         .addFields([
+             {
+                name:'Minimum players',
+                value:`${minPlayers}`
+             },
               { 
                 name: `Countdown Time:`,
                 value: `${waitTime}`,
@@ -75,21 +128,10 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     await interaction.reply({ embeds: [brawlEmbed], components: [joinButton] });
     //this message is where the players list is added as they join
     let playermessage = await interaction.channel.send(`😈`);
-    
-    let timeLeft = waitTime/1000;
-    const countdownMessage = await interaction.channel.send(`${timeLeft} seconds remaining`);
-    const countdown = setInterval(() => {
-        timeLeft--;
-        countdownMessage.edit(`${timeLeft} seconds remaining`);
-        if (timeLeft <= 0) {
-            clearInterval(countdown);
-            countdownMessage.edit("Time's Up!");
-        }
-    }, 1000);
 
     // Setup a collector or listener for button interaction
     const filter = (i: MessageComponentInteraction) => i.customId === 'join_brawl' && i.user.id !== interaction.client.user?.id;
-    const collector = interaction.channel.createMessageComponentCollector({ filter, time: waitTime }); // Adjust time as necessary
+    const collector = interaction.channel.createMessageComponentCollector({ filter}); // Adjust time as necessary
 
     collector.on('collect', async i => {
         // await i.deferReply({ephemeral: true} )
@@ -115,14 +157,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                     return;
                 }
                 player = await Player.createInstance(user, guildId);
-                //add coins temporarily - remove this later
-                //        player.coins =+ newplayercoins;
-
-                //subtract a coin and then save
-                // validateAmount(fee, player.coins);
                 player.coins -= fee;
-                // player.save();
-
                 //reset player stats to 0 but dont save
                 player.level = 1;
                 player.xp = 0;
@@ -133,16 +168,10 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 player.critDamage = 1.2;
                 player.pet = undefined;
                 player.skill = useMischief ? new Mischief() : undefined;
-                // const skill = new Mischief();
-                // skill.setOwner(player);
-                // player.equippedItems = [];
-                //add player to players list for this game
-                //	sendEmbed(msg, player.show());
                 i.reply({content:`You joined the Brawl`,ephemeral:true});
             } else {
                 player = await Player.createInstance(user, guildId);
                 player.skill = useMischief ? new Mischief() : undefined;
-                // player.coins = + newplayercoins; //new players get free coins
                 i.reply({ content:`Welcome to your first Brawl ${user.username}`,ephemeral:true});
             }
 
@@ -188,19 +217,23 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             }
 
             await playermessage.edit({ content: `**The following players have joined the Brawl:**\n\n ${playerjoined} \n\n ${playercounttext}`, components: [] });
-            // interaction.editReply({components:[]})
-        }
+            
+            if (minPlayers !== null && players.length >= minPlayers) {
 
- //       await i.deferUpdate();
+                startCountdown(interaction, players, playermessage, collector , waitTime);
+
+            }
+        }
     });
 
     collector?.on('end', async collected => {
         if (counterMessage) await counterMessage.delete().catch(console.error);
+        await interaction.editReply({ components: [] })
         // Handle the end of the collection period, e.g., start the brawl with the collected players
         // This might involve checking if enough players have joined, initializing a Battle instance, etc.
 
         // Example end handling (placeholder)
-        if (collected.size < 2) { // Adjust according to your minimum players requirement
+        if (collected.size < minPlayers) { // Adjust according to your minimum players requirement
             interaction.editReply({ components: [] })
             const embed3 = new EmbedBuilder()
                 .setTitle(`Narrator: Well that was disappointing...`)
@@ -212,11 +245,9 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
 
             await interaction.followUp({ embeds: [embed3] });
             return;
-            // await interaction.followUp({ content: "Not enough players joined the brawl.", ephemeral: true });
         } else {
 
             await interaction.followUp({ content: "The brawl begins!", ephemeral: true });
-            // const battle = new Battle(interaction, random.shuffle(players));
             if(interaction.channel != null){
                 const battle = new Battle(interaction.channel, random.shuffle(players));
                 //-----set battle speed-----
@@ -225,13 +256,11 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 const winner = await battle.run();
 
                 const reward = fee * players.length;
-    
+
                 const embed2 = new EmbedBuilder()
                     .setColor(GOLD)
                     .setTitle(`${winner.name} IS THE WINNER!`)
-                    //      .setTitle("Narrator")
                     .setDescription(`Out of ${players.length} players, ${bold(winner.name)} won the Brawl and walked away with ${reward} ${currency}!`);
-                //      .appendDescription(`\n*Psst ${msg.author.toString()}*`);
                 await interaction.followUp({ embeds: [embed2] });
                 try {
                     for (const brawler of players) {
@@ -245,163 +274,125 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                     await interaction.followUp("There was an issue updating player stats. Please try again later.");
                 }
             }
-            //-----set battle speed-----
-            // battle.setInterval(battleSpeed);
-            //--------------------------
-            // const winner = await battle.run();
-
-            // const reward = fee * players.length;
-
-            // const embed2 = new EmbedBuilder()
-            //     .setColor(GOLD)
-            //     .setTitle(`${winner.name} IS THE WINNER!`)
-            //     //      .setTitle("Narrator")
-            //     .setDescription(`Out of ${players.length} players, ${bold(winner.name)} won the Brawl and walked away with ${reward} ${currency}!`);
-            // //      .appendDescription(`\n*Psst ${msg.author.toString()}*`);
-            // await interaction.followUp({ embeds: [embed2] });
-            // try {
-            //     for (const brawler of players) {
-            //         await incrementFields('users', interaction.guildId, brawler.id, { gamesPlayed: 1 });
-            //         await incrementFields('users', interaction.guildId, brawler.id, { coins: -fee });
-            //     }
-            //     await incrementFields('users', interaction.guildId, winner.id, { gamesWon: 1 });
-            //     await incrementFields('users', interaction.guildId, winner.id, { coins: reward });
-            // } catch (error) {
-            //     console.error("Failed to update player stats", error);
-            //     await interaction.followUp("There was an issue updating player stats. Please try again later.");
-            // }
         }
     });
 
 
-    let Responses90 = [
-        `More time than normal... A Gargoyle must've been messing with time crystals again!\n\n ⏱**90 seconds to go** <@&956462114451640351>.`,
-        `90sec, wow! Best hit that button early.\n\n ⏱**90 seconds to go** <@&956462114451640351>.`,
-        `Sip your coffee, theres plenty of time left\n\n ⏱**90 seconds to go** <@&956462114451640351>.`,
-    ];
-
-    let Responses60 = [
-        `Twiddle your thumbs and whistle to the tune of violence.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
-        `Slap your cheeks and stretch your wings.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
-        `Take out your whetstone and throw it away. It'll be more fun with a blunt weapon.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
-        `Step on your neighbor's foot because that'll give you an advantage later on.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
-        `Stand around impatiently for the battle to start.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`,
-        `Kick your Narrator for good luck.\n\n ⏱**60 seconds to go** <@&956462114451640351>.`
-    ];
 
 
+};
 
-    let Responses30 = [
-        `Let the sense of impending combat fuel your warrior instinct.\n\n ⏱**30 seconds to go.**`,
-        `Close your eyes and let imaginary power course through your veins. Who knows, it might help.\n\n ⏱**30 seconds to go.**`,
-        `Practice by trying to stab your neighbor with your favorite weapon.\n\n ⏱**30 seconds to go.**`,
-        `Time has never before moved so slowly as you stay motionless, anticipating the big event.\n\n ⏱**30 seconds to go.**`,
-        `Today is the day that you'll finally win. Right?\n\n ⏱**30 seconds to go.**`,
-        `Wipe that saliva off your face! That <:ruin:985150753339494401> isn't yours yet.\n\n ⏱**30 seconds to go.**`
-    ];
+async function startCountdown(interaction: CommandInteraction, players: Player[], playermessage: Message, collector: any, countdownTime: number) {
+    if (!interaction.channel) {
+        await interaction.reply({ content: 'This command can only be used in a channel.', ephemeral: true });
+        return;
+    }
 
+    let timeLeft = countdownTime / 1000;
+    var jump = playermessage.url;
 
-    let Responses10 = [
-        `That's enough practice; take up positions.\n\n ⏱**10 seconds to go.**`,
-        `Step into the arena or be left standing at the sidelines watching your friends have fun.\n\n ⏱**10 seconds to go.**`,
-        `With high hopes and an empty stomach, you stand in the arena and mentally turn friend to foe.\n\n ⏱**10 seconds to go.**`,
-        `Suddenly time is going really fast for anyone who wants to join and is on their way here.\n\n ⏱**10 seconds to go.**`,
-        `⏱**10 seconds to go**\n\n 10. 9. 8. 7. 6. 5. Hey! Read slower! 4. 3. 2. 1.`,
-        `Grin menacingly and look around to strike fear into the other contestants.\n\n ⏱**10 seconds to go.**`,
-    ];
-
-    //    const Response1hr = Math.floor(Math.random() * Responses1hr.length);
     const Response90 = Math.floor(Math.random() * Responses90.length);
     const Response60 = Math.floor(Math.random() * Responses60.length);
     const Response30 = Math.floor(Math.random() * Responses30.length);
     const Response10 = Math.floor(Math.random() * Responses10.length);
 
+    const countdownMessage = await interaction.channel.send(`${timeLeft} seconds remaining`);
 
-    var jump = playermessage.url;
-    async function updateCounterMessage(embed: EmbedBuilder[]) {
-        if (!counterMessage) {
-            // If counterMessage does not exist, send a new message and assign it to counterMessage
-            counterMessage = await interaction.followUp({ embeds: embed, fetchReply: true }) as Message;
+    const countdown = setInterval(async () => {
+        timeLeft--;
+
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            await countdownMessage.edit("Time's Up!");
+            collector.stop();
         } else {
-            // If counterMessage exists, edit it with the new embeds
-            await counterMessage.edit({ embeds: embed });
+            if (waitTime == 90000) {
+                setTimeout(async () => {
+                    const embed5 = new EmbedBuilder()
+                        .setColor(embedcolor)
+                        .setAuthor({ name: `Someone is trying to start a brawl!` })
+        
+                        // .setTitle("Brawl")
+                        .setThumbnail(brawlicon)
+                        //      .setDescription(`You have 60sec to join`);
+                        .setDescription(`${Responses90[Response90]}`)
+                        .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
+        
+                    await updateCounterMessage(interaction,[embed5]);
+                    //	msg.channel.send("Brawl starts in 60sec")
+                }, (waitTime - 90000));
+            }
+        
+            if (waitTime == 60000) {
+                setTimeout(async () => {
+                    // if(counterMessage) await counterMessage.delete().catch(console.error);
+                    const embed5 = new EmbedBuilder()
+                        .setColor(embedcolor)
+                        .setAuthor({ name: `Someone is trying to start a brawl!` })
+        
+                        // .setTitle("Brawl")
+                        .setThumbnail(brawlicon)
+                        //      .setDescription(`You have 60sec to join`);
+                        .setDescription(`${Responses60[Response60]}`)
+                        .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
+        
+                    await updateCounterMessage(interaction,[embed5]);
+                    //	msg.channel.send("Brawl starts in 60sec")
+                }, (waitTime - 60000));
+            }
+        
+            if (waitTime == 30000) {
+                setTimeout(async () => {
+                    // if(counterMessage) await counterMessage.delete().catch(console.error);
+                    const embed5 = new EmbedBuilder()
+                        .setColor(embedcolor)
+                        .setAuthor({ name: `Someone is trying to start a brawl!` })
+        
+                        // .setTitle("Brawl")
+                        .setThumbnail(brawlicon)
+                        //      .setDescription(`...30sec left to join`);
+                        .setDescription(`${Responses30[Response30]}`)
+                        .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
+        
+                    await updateCounterMessage(interaction,[embed5]);
+        
+                    //	msg.channel.send("Brawl starts in 30sec")
+                }, (waitTime - 30000));
+            }
+        
+            if (waitTime == 10000) {
+                setTimeout(async () => {
+                    // if(counterMessage) await counterMessage.delete().catch(console.error);
+                    const embed5 = new EmbedBuilder()
+                        .setColor(embedcolor)
+                        .setAuthor({ name: `Someone is trying to start a brawl!` })
+        
+                        // .setTitle("Brawl")
+                        .setThumbnail(brawlicon)
+                        //      .setDescription(`...10sec left to join!`);
+                        .setDescription(`${Responses10[Response10]}`)
+                        .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
+        
+                    await updateCounterMessage(interaction,[embed5]);
+        
+                    //	msg.channel.send("Brawl starts in 10sec")
+                }, (waitTime - 10000));
+            }
+            await countdownMessage.edit(`${timeLeft} seconds remaining`);
         }
+    }, 1000);
+}
+
+
+async function updateCounterMessage(interaction:CommandInteraction, embed: EmbedBuilder[]) {
+    if (!counterMessage) {
+        // If counterMessage does not exist, send a new message and assign it to counterMessage
+        counterMessage = await interaction.followUp({ embeds: embed, fetchReply: true }) as Message;
+    } else {
+        // If counterMessage exists, edit it with the new embeds
+        await counterMessage.edit({ embeds: embed });
     }
-
-    if (waitTime == 90000) {
-        setTimeout(async () => {
-            const embed5 = new EmbedBuilder()
-                .setColor(embedcolor)
-                .setAuthor({ name: `Someone is trying to start a brawl!` })
-
-                // .setTitle("Brawl")
-                .setThumbnail(brawlicon)
-                //      .setDescription(`You have 60sec to join`);
-                .setDescription(`${Responses90[Response90]}`)
-                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
-
-            await updateCounterMessage([embed5]);
-            //	msg.channel.send("Brawl starts in 60sec")
-        }, (waitTime - 90000));
-    }
-
-    if (waitTime == 60000) {
-        setTimeout(async () => {
-            // if(counterMessage) await counterMessage.delete().catch(console.error);
-            const embed5 = new EmbedBuilder()
-                .setColor(embedcolor)
-                .setAuthor({ name: `Someone is trying to start a brawl!` })
-
-                // .setTitle("Brawl")
-                .setThumbnail(brawlicon)
-                //      .setDescription(`You have 60sec to join`);
-                .setDescription(`${Responses60[Response60]}`)
-                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
-
-            await updateCounterMessage([embed5]);
-            //	msg.channel.send("Brawl starts in 60sec")
-        }, (waitTime - 60000));
-    }
-
-    if (waitTime == 30000) {
-        setTimeout(async () => {
-            // if(counterMessage) await counterMessage.delete().catch(console.error);
-            const embed5 = new EmbedBuilder()
-                .setColor(embedcolor)
-                .setAuthor({ name: `Someone is trying to start a brawl!` })
-
-                // .setTitle("Brawl")
-                .setThumbnail(brawlicon)
-                //      .setDescription(`...30sec left to join`);
-                .setDescription(`${Responses30[Response30]}`)
-                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
-
-            await updateCounterMessage([embed5]);
-
-            //	msg.channel.send("Brawl starts in 30sec")
-        }, (waitTime - 30000));
-    }
-
-    if (waitTime == 10000) {
-        setTimeout(async () => {
-            // if(counterMessage) await counterMessage.delete().catch(console.error);
-            const embed5 = new EmbedBuilder()
-                .setColor(embedcolor)
-                .setAuthor({ name: `Someone is trying to start a brawl!` })
-
-                // .setTitle("Brawl")
-                .setThumbnail(brawlicon)
-                //      .setDescription(`...10sec left to join!`);
-                .setDescription(`${Responses10[Response10]}`)
-                .addFields({ name: `[JOIN THE BRAWL]`, value: `${jump}` });
-
-            await updateCounterMessage([embed5]);
-
-            //	msg.channel.send("Brawl starts in 10sec")
-        }, (waitTime - 10000));
-    }
-
-};
+}
 
 async function hasRole(member: GuildMember, roleName: string): Promise<boolean> {
     return member.roles.cache.some(role => role.name === roleName);
