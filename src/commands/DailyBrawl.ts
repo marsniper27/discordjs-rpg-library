@@ -307,6 +307,7 @@ export async function brawlExecute(minPlayers:number =5,waitTime:number = 90000,
             return;
         } else {
             if(channel){
+                brawlMessage.edit({ embeds: [brawlEmbed],components: [] })
                 await channel.send({ content: "The brawl begins!" });
                 const battle = new Battle(channel, random.shuffle(players));
                 //-----set battle speed-----
@@ -322,7 +323,7 @@ export async function brawlExecute(minPlayers:number =5,waitTime:number = 90000,
                     .setDescription(`Out of ${players.length} players, ${bold(winner.name)} won the Brawl and walked away with ${reward} ${currency}!`);
                 await channel.send({ embeds: [embed2] });
 
-                delete scheduledJobs[guildId];
+                delete runingBrawls[guildId];
                 try {
                     for (const brawler of players) {
                         await incrementFields('users', guildId, brawler.id, { gamesPlayed: 1 });
@@ -347,7 +348,7 @@ async function startCountdown(channel:GuildTextBasedChannel, players: Player[], 
 
     let timeLeft = countdownTime / 1000;
     var jump = playermessage.url;
-    let counterMessage = await channel.send({content:''}) as Message;;
+    let counterMessage = await channel.send({content:'countdown message'}) as Message;;
     // if (!counterMessage) {
     //     // If counterMessage does not exist, send a new message and assign it to counterMessage
     //     counterMessage = await channel.send({content:''}) as Message;
