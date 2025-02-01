@@ -24,12 +24,14 @@ let counterMessage: Message | null = null;
 export const data:any = new SlashCommandBuilder()
     .setName('brawl')
     .setDescription('All in - Last one standing wins!')
-    .addNumberOption(option =>
+    .addNumberOption((option:any)=>
         option.setName('lead_time')
-            .setDescription('Countdown time before brawl starts in minutes (default is 1.5mins)'))
-    .addBooleanOption(option =>
+            .setDescription('Countdown time before brawl starts in minutes (default is 1.5mins)')
+        )
+    .addBooleanOption((option:any) =>
         option.setName('use_mischief')
-            .setDescription('Enable mischief'));
+            .setDescription('Enable mischief')
+        );
 
 export async function execute(interaction: CommandInteraction): Promise<void> {
     if (!interaction.guildId || !interaction.inGuild()) {
@@ -41,7 +43,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         return;
     }
     // Safely attempt to retrieve and use the boolean option value
-    const booleanOption = interaction.options.data.find(option => option.name === 'use_mischief');
+    const booleanOption = interaction.options.data.find((option: { name: string; }) => option.name === 'use_mischief');
     const leadTimeOption = interaction.options.get('lead_time');
     if (leadTimeOption && typeof leadTimeOption.value === 'number') {
         waitTime = leadTimeOption.value * 60000;
@@ -91,7 +93,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     const filter = (i: MessageComponentInteraction) => i.customId === 'join_brawl' && i.user.id !== interaction.client.user?.id;
     const collector = interaction.channel.createMessageComponentCollector({ filter, time: waitTime }); // Adjust time as necessary
 
-    collector.on('collect', async i => {
+    collector.on('collect', async (i: { member: any; channel: any; customId: string; user: { fetch: () => any; }; reply: (arg0: { content: string; ephemeral: boolean; }) => void; }) => {
         // await i.deferReply({ephemeral: true} )
         if (!i.member) {
             console.log('member not found')
@@ -194,7 +196,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
  //       await i.deferUpdate();
     });
 
-    collector?.on('end', async collected => {
+    collector?.on('end', async (collected: { size: number; }) => {
         if (counterMessage) await counterMessage.delete().catch(console.error);
         // Handle the end of the collection period, e.g., start the brawl with the collected players
         // This might involve checking if enough players have joined, initializing a Battle instance, etc.
@@ -404,6 +406,6 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
 };
 
 async function hasRole(member: GuildMember, roleName: string): Promise<boolean> {
-    return member.roles.cache.some(role => role.name === roleName);
+    return member.roles.cache.some((role: { name: string; }) => role.name === roleName);
 }
 
