@@ -1,22 +1,26 @@
 // Brawl.ts
 import { SlashCommandBuilder , Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options } from 'discord.js';
 // import { findEntryByID,incrementFields } from '../utils/db';
-import { findEntryByID, incrementFields } from "mars-simple-mongodb"; // Adjust the import path as necessary
+// import { findEntryByID, incrementFields, findDocument } from "mars-simple-mongodb"; // Adjust the import path as necessary
+import { findEntryByID, incrementFields} from "mars-simple-mongodb";
 import { Player } from '../classes/Player';
 import { Battle } from '../classes/Battle';
 import { Mischief } from '../classes/Skill';
 import { random, bold, GOLD } from '../classes/utils'
+// import math from 'mathjs';
+import { evaluate } from 'mathjs';
+
 
 
 const maxPlayers = 30;
-const fee = 1; // Assuming a fee for joining the brawl
+// const fee = 1; // Assuming a fee for joining the brawl
 // Placeholder currency symbol
 const currency = '$';
-const battleSpeed = 2000;
+// const battleSpeed = 2000;
 // const waitTime = 90000; //90sec
-let waitTime = 90000; // Default value
-const embedcolor = 0x2f3136;
-const brawlicon = "https://cdn.discordapp.com/attachments/980341286718558248/1092769990639353857/Mega-Armoured-Trial2.jpg";
+// let waitTime = 90000; // Default value
+// const embedcolor = 0x2f3136;
+// const brawlicon = "https://cdn.discordapp.com/attachments/980341286718558248/1092769990639353857/Mega-Armoured-Trial2.jpg";
 
 let counterMessage: Message | null = null;
 
@@ -45,14 +49,24 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     // Safely attempt to retrieve and use the boolean option value
     const booleanOption = interaction.options.data.find((option: { name: string; }) => option.name === 'use_mischief');
     const leadTimeOption = interaction.options.get('lead_time');
-    if (leadTimeOption && typeof leadTimeOption.value === 'number') {
-        waitTime = leadTimeOption.value * 60000;
-    }
     const useMischief = booleanOption ? booleanOption.value : false;
     const brawlStarter = interaction.user;
     const guildId = interaction.guildId;
     const players: Player[] = []; // This will hold the Player instances
     let playerjoined = ''; // Track which players have joined
+
+    const serverSettings = await findEntryByID("brawl", interaction.guildId, '679fbeb09dabddc711f4403a');
+    const fee = serverSettings?.fee || 1;
+    const embedcolor = serverSettings?.embedcolor || 0x2f3136;
+    const brawlicon = serverSettings?.brawlicon || "https://cdn.discordapp.com/attachments/980341286718558248/1092769990639353857/Mega-Armoured-Trial2.jpg";
+    const maxPlayers = serverSettings?.maxPlayers || 30;
+    const battleSpeed = serverSettings?.battleSpeed || 2000;
+    const prize = serverSettings?.prize || 'fee * players';
+    let waitTime = serverSettings?.waitTime || 90000;
+
+    if (leadTimeOption && typeof leadTimeOption.value === 'number') {
+        waitTime = leadTimeOption.value * 60000;
+    }
 
     const brawlEmbed = new EmbedBuilder()
         .setTitle('Gargoyle Brawl')
@@ -226,26 +240,42 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 //--------------------------
                 const winner = await battle.run();
 
-                const reward = fee * players.length;
-    
-                const embed2 = new EmbedBuilder()
-                    .setColor(GOLD)
-                    .setTitle(`${winner.name} IS THE WINNER!`)
-                    //      .setTitle("Narrator")
-                    .setDescription(`Out of ${players.length} players, ${bold(winner.name)} won the Brawl and walked away with ${reward} ${currency}!`);
-                //      .appendDescription(`\n*Psst ${msg.author.toString()}*`);
-                await interaction.followUp({ embeds: [embed2] });
+                const variables = {
+                    fee: fee,
+                    players: players.length
+                };
+                // Evaluate the expression safely
                 try {
-                    for (const brawler of players) {
-                        await incrementFields('users', interaction.guildId, brawler.id, { gamesPlayed: 1 });
-                        await incrementFields('users', interaction.guildId, brawler.id, { coins: -fee });
+                    console.log("Prize:", prize); // Output depends on expression
+                    console.log("Variables:", variables); // Output depends on expression
+                    const reward = evaluate(prize, variables);
+                    console.log("Reward:", reward); // Output depends on expression
+                    const embed2 = new EmbedBuilder()
+                        .setColor(GOLD)
+                        .setTitle(`${winner.name} IS THE WINNER!`)
+                        //      .setTitle("Narrator")
+                        .setDescription(`Out of ${players.length} players, ${bold(winner.name)} won the Brawl and walked away with ${reward} ${currency}!`);
+                    //      .appendDescription(`\n*Psst ${msg.author.toString()}*`);
+                    await interaction.followUp({ embeds: [embed2] });
+                    try {
+                        for (const brawler of players) {
+                            await incrementFields('users', interaction.guildId, brawler.id, { gamesPlayed: 1 });
+                            await incrementFields('users', interaction.guildId, brawler.id, { coins: -fee });
+                        }
+                        await incrementFields('users', interaction.guildId, winner.id, { gamesWon: 1 });
+                        await incrementFields('users', interaction.guildId, winner.id, { coins: reward });
+                    } catch (error) {
+                        console.error("Failed to update player stats", error);
+                        await interaction.followUp("There was an issue updating player stats. Please try again later.");
                     }
-                    await incrementFields('users', interaction.guildId, winner.id, { gamesWon: 1 });
-                    await incrementFields('users', interaction.guildId, winner.id, { coins: reward });
-                } catch (error) {
-                    console.error("Failed to update player stats", error);
-                    await interaction.followUp("There was an issue updating player stats. Please try again later.");
+                } catch (error:any) {
+                    console.error("Invalid expression:", error.message);
                 }
+                // const calculate = new Function("fee", "players", `return ${serverSettings.};`);
+                // const reward = calculate(fee, players);
+                // const reward = fee * players.length;
+    
+                
             }
             //-----set battle speed-----
             // battle.setInterval(battleSpeed);
