@@ -2,13 +2,12 @@
 import { SlashCommandBuilder , Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options } from 'discord.js';
 // import { findEntryByID,incrementFields } from '../utils/db';
 // import { findEntryByID, incrementFields, findDocument } from "mars-simple-mongodb"; // Adjust the import path as necessary
-import { findEntryByID, incrementFields} from "mars-simple-mongodb";
+import { findEntryByID, incrementFields, findDocuments } from "mars-simple-mongodb";
+import { evaluate } from 'mathjs';
 import { Player } from '../classes/Player';
 import { Battle } from '../classes/Battle';
 import { Mischief } from '../classes/Skill';
-import { random, bold, GOLD } from '../classes/utils'
-// import math from 'mathjs';
-import { evaluate } from 'mathjs';
+import { random, bold, GOLD } from '../classes/utils';
 
 
 
@@ -47,15 +46,16 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         return;
     }
     // Safely attempt to retrieve and use the boolean option value
-    const booleanOption = interaction.options.data.find((option: { name: string; }) => option.name === 'use_mischief');
+    const useMischiefOption = interaction.options.data.find((option: { name: string; }) => option.name === 'use_mischief');
     const leadTimeOption = interaction.options.get('lead_time');
-    const useMischief = booleanOption ? booleanOption.value : false;
+    // const useMischiefOption = booleanOption ? booleanOption.value : false;
     const brawlStarter = interaction.user;
     const guildId = interaction.guildId;
     const players: Player[] = []; // This will hold the Player instances
     let playerjoined = ''; // Track which players have joined
-
-    const serverSettings = await findEntryByID("brawl", interaction.guildId, '679fbeb09dabddc711f4403a');
+    const serverSettingsDocument = await findDocuments("brawl", guildId)
+    const serverSettings = serverSettingsDocument[0];
+    // const serverSettings = await findEntryByID("brawl", interaction.guildId, '679fbeb09dabddc711f4403a');
     const fee = serverSettings?.fee || 1;
     const embedcolor = serverSettings?.embedcolor || 0x2f3136;
     const brawlicon = serverSettings?.brawlicon || "https://cdn.discordapp.com/attachments/980341286718558248/1092769990639353857/Mega-Armoured-Trial2.jpg";
@@ -63,9 +63,13 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     const battleSpeed = serverSettings?.battleSpeed || 2000;
     const prize = serverSettings?.prize || 'fee * players';
     let waitTime = serverSettings?.waitTime || 90000;
+    let useMischief = serverSettings?.useMischief || false;
 
     if (leadTimeOption && typeof leadTimeOption.value === 'number') {
         waitTime = leadTimeOption.value * 60000;
+    }
+    if (useMischiefOption && typeof useMischiefOption.value === 'boolean') {
+        useMischief = useMischiefOption.value;
     }
 
     const brawlEmbed = new EmbedBuilder()
@@ -157,6 +161,14 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 i.reply({content:`You joined the Brawl`,ephemeral:true});
             } else {
                 player = await Player.createInstance(user, guildId);
+                player.level = 1;
+                player.xp = 0;
+                player.hp = 100;
+                player.attack = 10;
+                player.naturalArmor = 0.1;
+                player.critChance = 0.3;
+                player.critDamage = 1.2;
+                player.pet = undefined;
                 player.skill = useMischief ? new Mischief() : undefined;
                 // player.coins = + newplayercoins; //new players get free coins
                 i.reply({ content:`Welcome to your first Brawl ${user.username}`,ephemeral:true});

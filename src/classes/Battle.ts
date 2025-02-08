@@ -49,6 +49,7 @@ export class Battle extends BaseBattle {
     await this.reply("Starting battle");
 
     while (battleQueue.length !== 1) {
+      // console.log("battleQueue", battleQueue);
       this.round++;
 
       const player = battleQueue.shift()!;

@@ -1,5 +1,5 @@
 import { scheduleJob, Job } from 'node-schedule';
-import { SlashCommandBuilder , Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options, GuildChannel, GuildTextBasedChannel, Guild } from 'discord.js';
+import { TextChannel, SlashCommandBuilder , Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options, GuildChannel, GuildTextBasedChannel, Guild } from 'discord.js';
 // import { execute as brawlExecute } from './BrawlPlayers'; // Adjust the import path as necessary// import { findEntryByID,incrementFields } from '../utils/db';
 import { findEntryByID, incrementFields, updateDocument } from "mars-simple-mongodb"; // Adjust the import path as necessary
 import { Player } from '../classes/Player';
@@ -67,23 +67,24 @@ let Responses10 = [
 export const data:any = new SlashCommandBuilder()
     .setName('daily_brawl')
     .setDescription('Create a daily brawl in this channel')
-    .addStringOption(option=>
+    .addStringOption((option:any)=>
         option.setName('brawl_time')
             .setDescription('The time you want the daily brawl to start')
             .setRequired(true))
-    .addNumberOption(option =>
+    .addNumberOption((option: any) =>
         option.setName('min_players')
             .setDescription('Number of players required before starting countdown')
             .setRequired(true))
-    .addNumberOption(option =>
+    .addNumberOption((option: any) =>
         option.setName('lead_time')
             .setDescription('Countdown time before brawl starts in minutes (default is 1.5mins)'))
-    .addBooleanOption(option =>
+    .addBooleanOption((option: any) =>
         option.setName('use_mischief')
             .setDescription('Enable mischief'));
 
 export async function execute(interaction: CommandInteraction): Promise<void> {
     const guildId = interaction.guildId;
+    if (!guildId) return;
     const brawlData = await findEntryByID('brawl',guildId,'autoBrawl')
     if(!brawlData && guildId != null){
         scheduleJobForGuild(guildId,'*/30 * * * *',interaction)
@@ -113,7 +114,8 @@ async function scheduleJobForGuild(guildID:string, cronPattern:string, interacti
 async function dailyTask(interaction: CommandInteraction) {
     console.log('Running daily task...');
     if (!interaction.guildId || !interaction.inGuild()) {
-        await interaction.channel?.send({ content: 'This command can only be used in a server.'});
+        const channel = interaction.channel as TextChannel
+        await channel?.send({ content: 'This command can only be used in a server.'});
         return;
     }
     if (!interaction.channel) {
@@ -195,12 +197,13 @@ export async function brawlExecute(minPlayers:number =5,waitTime:number = 90000,
     const filter = (i: MessageComponentInteraction) => i.customId === 'join_brawl'+jobId //&& i.user.id !== interaction.client.user?.id;
     const collector = channel.createMessageComponentCollector({ filter}); // Adjust time as necessary
 
-    collector.on('collect', async i => {
+    collector.on('collect', async (i:any) => {
         // await i.deferReply({ephemeral: true} )
         if (!i.member) {
             console.log('member not found')
             return;
         }
+        if (!i.guildId) {return}
         const member = i.member as GuildMember;
         const user = member.user;
         if (!i.channel) { return }

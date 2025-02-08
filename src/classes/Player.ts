@@ -12,16 +12,18 @@ interface PlayerData {
   naturalArmor: number;
   critChance: number;
   critDamage: number;
-  gamesPlayed:number;
+  gamesPlayed: number;
   gamesWon: number;
   coins: number;
   superCoins: number;
   level: number;
   xp: number;
+  icon: string;
 }
 
 export class Player extends Fighter {
   user: User;
+  icon: string;
 
   private constructor(user: User, data: PlayerData) {
     super(user.username);
@@ -39,6 +41,7 @@ export class Player extends Fighter {
     this.superCoins = data.superCoins;
     this.level = data.level;
     this.xp = data.xp;
+    this.icon = '👤'; // Default icon
   }
 
   // Factory method to asynchronously create a Player instance
@@ -55,7 +58,7 @@ async function findOrCreatePlayerData(user: User, guildId: string): Promise<Play
     let defaults = await findEntryByID('users', 'defaults', 'default');
     // Default values for a new player
     // const defaults: PlayerData = {
-      defaults._id= user.id; // Use Discord user ID as the database document ID
+    defaults._id = user.id; // Use Discord user ID as the database document ID
     //   attack: 10,
     //   hp: 100,
     //   armor: 0.1,

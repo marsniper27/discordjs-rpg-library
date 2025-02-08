@@ -39,7 +39,6 @@
     "@types/node": "^20.11.26",
     "@types/node-schedule": "^2.1.7",
     "mathjs": "^14.2.0",
-    "mars-simple-mongodb": "^0.1.2",
     "typedoc": "^0.24.7",
     "typescript": "^5.0.4"
   }

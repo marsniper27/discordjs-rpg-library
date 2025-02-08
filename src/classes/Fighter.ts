@@ -87,7 +87,7 @@ export class Fighter {
    * MessageEmbed that represents this Fighter. Passing another Fighter in this
    * method will make comparison between this Fighter stat with the other 
    * */
-  async show(guild:String, fighter?: Fighter) {
+  async show(guild:string, fighter?: Fighter) {
     const theme = await findEntryByID('theme','server',guild)
     const armor = formatPercent(this.naturalArmor);
     const critChance = formatPercent(this.critChance);

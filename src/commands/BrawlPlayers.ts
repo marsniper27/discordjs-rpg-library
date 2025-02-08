@@ -1,5 +1,5 @@
 // BrawlPlayers.ts
-import { SlashCommandBuilder , Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options } from 'discord.js';
+import { TextChannel, SlashCommandBuilder , Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options } from 'discord.js';
 // import { findEntryByID,incrementFields } from '../utils/db';
 import { findEntryByID, incrementFields } from "mars-simple-mongodb"; // Adjust the import path as necessary
 import { Player } from '../classes/Player';
@@ -64,15 +64,15 @@ let Responses10 = [
 export const data:any = new SlashCommandBuilder ()
     .setName('brawl_players')
     .setDescription('All in - Last one standing wins!')
-    .addNumberOption(option =>
+    .addNumberOption((option: any) =>
         option.setName('min_players')
             .setDescription('Number of players required before starting countdown')
             .setRequired(true))
         
-    .addNumberOption(option =>
+    .addNumberOption((option: any) =>
         option.setName('lead_time')
             .setDescription('Countdown time before brawl starts in minutes (default is 1.5mins)'))
-    .addBooleanOption(option =>
+    .addBooleanOption((option: any) =>
         option.setName('use_mischief')
             .setDescription('Enable mischief'));
 
@@ -87,7 +87,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     }
     // Safely attempt to retrieve and use the boolean option value
     const minPlayersOption = interaction.options.get('min_players');
-    const booleanOption = interaction.options.data.find(option => option.name === 'use_mischief');
+    const booleanOption = interaction.options.data.find((option: any) => option.name === 'use_mischief');
     const leadTimeOption = interaction.options.get('lead_time');
     if (minPlayersOption && typeof minPlayersOption.value === 'number') {
         minPlayers = minPlayersOption.value;
@@ -133,7 +133,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     const filter = (i: MessageComponentInteraction) => i.customId === 'join_brawl' && i.user.id !== interaction.client.user?.id;
     const collector = interaction.channel.createMessageComponentCollector({ filter}); // Adjust time as necessary
 
-    collector.on('collect', async i => {
+    collector.on('collect', async (i: { member: any; channel: any; customId: string; user: { fetch: () => any; }; reply: (arg0: { content: string; ephemeral: boolean; }) => void; }) => {
         // await i.deferReply({ephemeral: true} )
         if (!i.member) {
             console.log('member not found')
@@ -226,7 +226,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         }
     });
 
-    collector?.on('end', async collected => {
+    collector?.on('end', async (collected: { size: number; }) => {
         if (counterMessage) await counterMessage.delete().catch(console.error);
         await interaction.editReply({ components: [] })
         // Handle the end of the collection period, e.g., start the brawl with the collected players
@@ -296,7 +296,8 @@ async function startCountdown(interaction: CommandInteraction, players: Player[]
     const Response30 = Math.floor(Math.random() * Responses30.length);
     const Response10 = Math.floor(Math.random() * Responses10.length);
 
-    const countdownMessage = await interaction.channel.send(`${timeLeft} seconds remaining`);
+    const channel = interaction.channel as TextChannel
+    const countdownMessage = await channel.send(`${timeLeft} seconds remaining`);
 
     const countdown = setInterval(async () => {
         timeLeft--;
@@ -395,6 +396,6 @@ async function updateCounterMessage(interaction:CommandInteraction, embed: Embed
 }
 
 async function hasRole(member: GuildMember, roleName: string): Promise<boolean> {
-    return member.roles.cache.some(role => role.name === roleName);
+    return member.roles.cache.some((role:any) => role.name === roleName);
 }
 
