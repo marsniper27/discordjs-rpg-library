@@ -57,7 +57,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     const serverSettings = serverSettingsDocument[0];
     // const serverSettings = await findEntryByID("brawl", interaction.guildId, '679fbeb09dabddc711f4403a');
     const fee = serverSettings?.fee || 1;
-    const embedcolor = serverSettings?.embedcolor || 0x2f3136;
+    const embedcolor = parseInt(serverSettings.embedColor, 16) || 0x2f3136;
     const brawlicon = serverSettings?.brawlicon || "https://cdn.discordapp.com/attachments/980341286718558248/1092769990639353857/Mega-Armoured-Trial2.jpg";
     const maxPlayers = serverSettings?.maxPlayers || 30;
     const battleSpeed = serverSettings?.battleSpeed || 2000;
