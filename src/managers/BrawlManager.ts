@@ -76,11 +76,11 @@ class BrawlManager {
                 // Start the brawl here
                 console.log(`Starting brawl in guild: ${guildId}`);
 
-                await interaction.followUp({ content: "The brawl begins!", ephemeral: true });
+                await interaction.followUp({ content: "The brawl begins!" });
                 // const battle = new Battle(interaction, random.shuffle(players));
                 if (interaction.channel != null) {
 
-                    if(brawl.players.length > brawl.settings.maxPlayers){
+                    if (brawl.players.length > brawl.settings.maxPlayers) {
                         const randomizedPlayers = random.shuffle(brawl.players);
                         brawl.players = randomizedPlayers.slice(0, brawl.settings.maxPlayers);
                         interaction.followUp(`The brawl is full! ${brawl.settings.maxPlayers} random players will enter the areana.`);
