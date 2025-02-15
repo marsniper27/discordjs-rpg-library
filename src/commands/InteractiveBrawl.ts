@@ -31,7 +31,7 @@ export const data: any = new SlashCommandBuilder()
     );
 
 export async function execute(interaction: CommandInteraction): Promise<void> {
-    interaction.deferReply();
+    await interaction.deferReply();
     if (!interaction.guild) return;
     const guildId = interaction.guildId;
 
@@ -129,8 +129,8 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         const member = i.member as GuildMember;
         if (!member) return;
 
+        await i.deferReply({ ephemeral: true });
         if (i.customId === 'join_brawl') {
-            i.deferReply({ ephemeral: true });
             if (players.length >= settings.maxPlayers) {
                 i.editReply({ content: 'The brawl is already full!' });
                 return;
@@ -143,6 +143,9 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             // Add player to the brawl message
             await addtoBrawl(guildId, players, settings, playermessage);
 
+        }
+        else{
+            i.editReply({ content: 'Invalid button interaction!' });
         }
     });
 
@@ -158,11 +161,13 @@ async function hasRole(member: GuildMember, roleName: string): Promise<boolean> 
 
 async function createPlayer(member: GuildMember, guildId: string, players: Player[], settings: ServerSettings, i: CommandInteraction | MessageComponentInteraction): Promise<Player | null> {
     console.log(`i is of type: ${i.constructor.name}`);
+    console.log(`message deffered:`,i.deferred)
 
     const user = member.user;
     if (players.find(player => player.name === user.username)) {
         if (i.constructor.name == 'ButtonInteraction') {
-            i.editReply({ content: `You have already joined the brawl!` });
+            console.log('Already joined');
+            await i.editReply({ content: `You have already joined the brawl!` });
         }
         return (null);
     }
@@ -175,6 +180,7 @@ async function createPlayer(member: GuildMember, guildId: string, players: Playe
     if (playerData) {
         if (playerData.coins < settings.fee) {
             if (i.constructor.name == 'ButtonInteraction') {
+                console.log('Not enough coins');
                 await i.editReply({ content: "You do not have enough coins to join!" });
             }
             return (null);
@@ -195,7 +201,11 @@ async function createPlayer(member: GuildMember, guildId: string, players: Playe
         player.skill = settings.useMischief ? new Mischief() : undefined;
 
         if (i.constructor.name == 'ButtonInteraction') {
-            i.editReply({ content: `You joined the Brawl  --${playerHealth}` });
+            console.log('Joined');
+            if (!i.deferred && !i.replied) {
+                await i.deferReply({ ephemeral: true });
+            }
+            await i.editReply({ content: `You joined the Brawl  --${playerHealth}` });
         }
 
     } else {
@@ -203,7 +213,8 @@ async function createPlayer(member: GuildMember, guildId: string, players: Playe
         player.skill = settings.useMischief ? new Mischief() : undefined;
 
         if (i.constructor.name == 'ButtonInteraction') {
-            i.editReply({ content: `Welcome to your first Brawl ${user.username}` });
+            console.log('First time joined');
+            await i.editReply({ content: `Welcome to your first Brawl ${user.username}` });
         }
     }
     const playerIcon = SpecialPlayers.getIcon(user.username);

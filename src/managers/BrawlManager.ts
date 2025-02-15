@@ -58,7 +58,7 @@ class BrawlManager {
             const interaction = brawl.interaction;
             // Example end handling (placeholder)
             if (brawl.players.length < 2) { // Adjust according to your minimum players requirement
-                interaction.editReply({ components: [] })
+                await nteraction.editReply({ components: [] })
                 const embed3 = new EmbedBuilder()
                     .setTitle(`Narrator: Well that was disappointing...`)
                     .setColor(0x2f3136)
@@ -73,6 +73,7 @@ class BrawlManager {
                 return;
                 // await interaction.followUp({ content: "Not enough players joined the brawl.", ephemeral: true });
             } else {
+                await interaction.editReply({ components: [] })
                 // Start the brawl here
                 console.log(`Starting brawl in guild: ${guildId}`);
 
@@ -84,6 +85,9 @@ class BrawlManager {
                         const randomizedPlayers = random.shuffle(brawl.players);
                         brawl.players = randomizedPlayers.slice(0, brawl.settings.maxPlayers);
                         interaction.followUp(`The brawl is full! ${brawl.settings.maxPlayers} random players will enter the areana.`);
+                    }
+                    else{
+                        brawl.players = random.shuffle(brawl.players);
                     }
 
                     // Example: create a new battle instance
