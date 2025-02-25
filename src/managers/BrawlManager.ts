@@ -14,7 +14,7 @@ const gameManager: GameManager = gm;
 
 class BrawlManager {
     private static instance: BrawlManager;
-    private ongoingBrawls: Map<string, { id: string, interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message }> = new Map();
+    private ongoingBrawls: Map<string, { id: string, gameType: string, interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message }> = new Map();
 
     private constructor() { }
 
@@ -25,7 +25,7 @@ class BrawlManager {
         return BrawlManager.instance;
     }
 
-    public createBrawl(id: string, interaction: CommandInteraction, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message): { id: string, interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message } {
+    public createBrawl(id: string, interaction: CommandInteraction, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message): { id: string, gameType: string, interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message } {
 
         let timeLeft = settings.waitTime / 1000;
         let timeout: NodeJS.Timeout | null = null;
@@ -48,9 +48,9 @@ class BrawlManager {
 
 
 
-        const brawl = { id, interaction, players:[], battle: null, timeout, settings, playerMessage, countdownMessage };
+        const brawl = { id, gameType: 'brawl', interaction, players:[], battle: null, timeout, settings, playerMessage, countdownMessage };
         this.ongoingBrawls.set(id, brawl);
-        gameManager.addGame(brawl, 'brawl');
+        gameManager.addGame(brawl);
         return brawl;
     }
 
@@ -151,7 +151,7 @@ class BrawlManager {
         if (brawl) {
             clearTimeout(brawl.timeout!);
             this.ongoingBrawls.delete(id);
-            gameManager.removeGame(brawl);
+            gameManager.removeGame(brawl.id);
         }
     }
 
