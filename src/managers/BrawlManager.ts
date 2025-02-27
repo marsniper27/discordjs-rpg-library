@@ -6,10 +6,15 @@ import { Battle } from '../classes/Battle';
 import { bold, GOLD, random } from '../classes/utils';
 import { ServerSettings } from '../classes/ServerSettings';
 import { incrementFields } from 'mars-simple-mongodb';
+import { gameManager as gm, GameManager } from '../../../../Bot/utils/gameManager.js';
+// import { gameManager} from 'gameManager';
+// import { gameManager as gm, GameManager } from 'gameManager';
+
+const gameManager: GameManager = gm;
 
 class BrawlManager {
     private static instance: BrawlManager;
-    private ongoingBrawls: Map<string, { interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message }> = new Map();
+    private ongoingBrawls: Map<string, { id: string, gameType: string, interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message }> = new Map();
 
     private constructor() { }
 
@@ -20,7 +25,8 @@ class BrawlManager {
         return BrawlManager.instance;
     }
 
-    public createBrawl(interaction: CommandInteraction, guildId: string, players: Player[], settings: ServerSettings, playerMessage: Message, countdownMessage?: Message): { interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message } {
+    public createBrawl(id: string, interaction: CommandInteraction, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message): { id: string, gameType: string, interaction: CommandInteraction, players: Player[], battle: Battle | null, timeout: NodeJS.Timeout | null, settings: ServerSettings, playerMessage: Message, countdownMessage?: Message } {
+
         let timeLeft = settings.waitTime / 1000;
         let timeout: NodeJS.Timeout | null = null;
         if (countdownMessage) {
@@ -32,23 +38,24 @@ class BrawlManager {
                 if (timeLeft <= 0) {
                     clearInterval(brawl.timeout);
                     countdownMessage.edit("Time's Up!");
-                    this.startBrawl(guildId);
+                    this.startBrawl(id);
                 }
             }, 1000);
         }
         else {
-            timeout = setTimeout(() => this.startBrawl(guildId), settings.waitTime);
+            timeout = setTimeout(() => this.startBrawl(id), settings.waitTime);
         }
 
 
 
-        const brawl = { interaction, players, battle: null, timeout, settings, playerMessage, countdownMessage };
-        this.ongoingBrawls.set(guildId, brawl);
+        const brawl = { id, gameType: 'brawl', interaction, players:[], battle: null, timeout, settings, playerMessage, countdownMessage };
+        this.ongoingBrawls.set(id, brawl);
+        gameManager.addGame(brawl);
         return brawl;
     }
 
-    public async startBrawl(guildId: string) {
-        const brawl = this.ongoingBrawls.get(guildId);
+    public async startBrawl(id: string) {
+        const brawl = this.ongoingBrawls.get(id);
         // console.log("brawlers:", brawl?.players)
         const currency = '$';
 
@@ -56,9 +63,11 @@ class BrawlManager {
         if (brawl) {
             if (brawl.interaction.channel == null) return;
             const interaction = brawl.interaction;
+            const guildID = interaction.guildId;
+            if (!guildID) return;
             // Example end handling (placeholder)
             if (brawl.players.length < 2) { // Adjust according to your minimum players requirement
-                await nteraction.editReply({ components: [] })
+                await interaction.editReply({ components: [] })
                 const embed3 = new EmbedBuilder()
                     .setTitle(`Narrator: Well that was disappointing...`)
                     .setColor(0x2f3136)
@@ -69,13 +78,13 @@ class BrawlManager {
 
                 await interaction.followUp({ embeds: [embed3] });
                 // End the brawl in the manager
-                brawlManager.endBrawl(guildId);
+                brawlManager.endBrawl(id);
                 return;
                 // await interaction.followUp({ content: "Not enough players joined the brawl.", ephemeral: true });
             } else {
                 await interaction.editReply({ components: [] })
                 // Start the brawl here
-                console.log(`Starting brawl in guild: ${guildId}`);
+                console.log(`Starting brawl in guild: ${interaction.guildId}`);
 
                 await interaction.followUp({ content: "The brawl begins!" });
                 // const battle = new Battle(interaction, random.shuffle(players));
@@ -86,13 +95,13 @@ class BrawlManager {
                         brawl.players = randomizedPlayers.slice(0, brawl.settings.maxPlayers);
                         interaction.followUp(`The brawl is full! ${brawl.settings.maxPlayers} random players will enter the areana.`);
                     }
-                    else{
+                    else {
                         brawl.players = random.shuffle(brawl.players);
                     }
 
                     // Example: create a new battle instance
                     brawl.battle = new Battle(interaction.channel as GuildTextBasedChannel, random.shuffle(brawl.players));
-                    this.ongoingBrawls.set(guildId, brawl); // Explicitly update the map
+                    this.ongoingBrawls.set(id, brawl); // Explicitly update the map
                     const settings = brawl.settings;
                     //-----set battle speed-----
                     brawl.battle.setInterval(settings.battleSpeed);
@@ -118,11 +127,11 @@ class BrawlManager {
                         await interaction.followUp({ embeds: [embed2] });
                         try {
                             for (const brawler of brawl.players) {
-                                await incrementFields('users', guildId, brawler.id, { gamesPlayed: 1 });
-                                await incrementFields('users', guildId, brawler.id, { coins: -settings.fee });
+                                await incrementFields('users', guildID, brawler.id, { gamesPlayed: 1 });
+                                await incrementFields('users', guildID, brawler.id, { coins: -settings.fee });
                             }
-                            await incrementFields('users', guildId, winner.id, { gamesWon: 1 });
-                            await incrementFields('users', guildId, winner.id, { coins: reward });
+                            await incrementFields('users', guildID, winner.id, { gamesWon: 1 });
+                            await incrementFields('users', guildID, winner.id, { coins: reward });
                         } catch (error) {
                             console.error("Failed to update player stats", error);
                             await interaction.followUp("There was an issue updating player stats. Please try again later.");
@@ -131,35 +140,37 @@ class BrawlManager {
                         console.error("Invalid expression:", error.message);
                     }
                 }
+                brawlManager.endBrawl(id);
             }
         }
     }
 
 
-    public endBrawl(guildId: string): void {
-        const brawl = this.ongoingBrawls.get(guildId);
+    public endBrawl(id: string): void {
+        const brawl = this.ongoingBrawls.get(id);
         if (brawl) {
             clearTimeout(brawl.timeout!);
-            this.ongoingBrawls.delete(guildId);
+            this.ongoingBrawls.delete(id);
+            gameManager.removeGame(brawl.id);
         }
     }
 
-    public getBrawl(guildId: string) {
-        return this.ongoingBrawls.get(guildId);
+    public getBrawl(id: string) {
+        return this.ongoingBrawls.get(id);
     }
 
-    public updateBrawl(guildId: string, newPlayers: Player[]) {
-        const brawl = this.getBrawl(guildId);
+    public updateBrawl(id: string, newPlayers: Player[]) {
+        const brawl = this.getBrawl(id);
         if (brawl) {
             brawl.players = newPlayers;
-            this.ongoingBrawls.set(guildId, brawl); // Explicitly update the map
+            this.ongoingBrawls.set(id, brawl); // Explicitly update the map
         }
     }
 
-    public updateBrawlWaitTime(guildId: string, newWaitTime: number): void {
-        const brawl = this.getBrawl(guildId);
+    public updateBrawlWaitTime(id: string, newWaitTime: number): void {
+        const brawl = this.getBrawl(id);
         if (brawl && brawl.countdownMessage) {
-            console.log('Updating wait time for brawl in guild:', guildId);
+            console.log('Updating wait time for brawl in guild:', brawl.interaction.guildId);
 
             if (brawl.timeout) {
                 console.log('Clearing old timeout');
@@ -176,23 +187,23 @@ class BrawlManager {
                 if (timeLeft <= 0) {
                     clearInterval(interval);
                     brawl.countdownMessage!.edit("Time's Up!");
-                    this.startBrawl(guildId);
+                    this.startBrawl(id);
                 }
             }, 1000);
 
             brawl.timeout = interval;
-            this.ongoingBrawls.set(guildId, brawl); // Explicitly update the map
+            this.ongoingBrawls.set(id, brawl); // Explicitly update the map
         }
     }
 
     // Method to refresh/update the brawl state
-    public refreshBrawlState(guildId: string) {
-        const brawl = this.getBrawl(guildId);
+    public refreshBrawlState(id: string) {
+        const brawl = this.getBrawl(id);
         if (brawl) {
             // Trigger game state refresh or handle the game logic (such as recalculating players, timers, etc.)
-            console.log(`Refreshing state for brawl in guild: ${guildId}`);
+            console.log(`Refreshing state for brawl in guild: ${brawl.interaction.guildId}`);
             // Example: recheck players or update battle state
-            this.updateBrawl(guildId, brawl.players); // Update player list (if needed)
+            this.updateBrawl(id, brawl.players); // Update player list (if needed)
         }
     }
 

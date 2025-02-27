@@ -3,6 +3,7 @@
 import { SlashCommandBuilder, Message, MessageComponentInteraction, ButtonInteraction, CommandInteractionOptionResolver, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options, Role } from 'discord.js';
 import { findEntryByID, incrementFields, findDocuments } from "mars-simple-mongodb";
 import { evaluate } from 'mathjs';
+import { v4 as uuidv4 } from 'uuid';
 import { Player } from '../classes/Player';
 import { Battle } from '../classes/Battle';
 import { Mischief } from '../classes/Skill';
@@ -43,11 +44,11 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         await interaction.editReply({ content: 'This command can only be used in a channel.' });
         return;
     }
-
+    const id = uuidv4();
     const settings = await ServerSettings.fetch(interaction, guildId);
 
     // Create trackers for the players and the players who have joined
-    const players: Player[] = []; // This will hold the Player instances
+    // const players: Player[] = []; // This will hold the Player instances
     // let playerjoined = ''; // Track which players have joined
     const brawlStarter = interaction.user;
     const mentionedUsers = new Set<string>(); // Store unique user IDs
@@ -62,6 +63,10 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
                 name: `Countdown Time:`,
                 value: `${settings.waitTime}`,
             },
+            {
+                name: `Id:`,
+                value: `${id}`,
+            },
         ])
         .setColor(parseInt(settings.embedColor, 16))
         .setThumbnail(settings.brawlIcon); // Replace with your actual image URL
@@ -69,17 +74,17 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     const joinButton = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
             new ButtonBuilder()
-                .setCustomId('join_brawl')
+                .setCustomId(`join_brawl_${id}`)
                 .setLabel('---> Join <---')
                 .setStyle(ButtonStyle.Success),
         );
 
-    await interaction.editReply({ embeds: [brawlEmbed], components: [joinButton] });
+    await interaction.editReply({ embeds: [brawlEmbed]});
 
     //this message is where the players list is added as they join
     let playermessage = await interaction.channel.send(`😈`);
     const countdownMessage = await interaction.channel.send(`...`);
-    brawlManager.createBrawl(interaction, guildId, players, settings, playermessage, countdownMessage);
+    brawlManager.createBrawl(id, interaction, settings, playermessage, countdownMessage);
 
     if (mentionString) {
         const mentionMatches = mentionString.match(/<@!?(\d+)>|<@&(\d+)>/g) || [];
@@ -109,48 +114,74 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             const user = await interaction.guild?.members.fetch(userId);
             if (!user) continue;
 
-            const player = await createPlayer(user, guildId, players, settings, interaction);
+            const brawl = brawlManager.getBrawl(id);
+            if (!brawl) continue;
+
+            const player = await createPlayer(user, guildId, brawl.players, settings, interaction);
             if (!player) continue;
 
-            players.push(player);
+            console.log(`Adding mentioned user: ${user.user.username} to the brawl`);
             // Add player to the brawl message
-            await addtoBrawl(guildId, players, settings, playermessage);
+            await addtoBrawl(id, player, settings, playermessage);
         }
     }
 
-
+    const buttonMessage = await interaction.editReply({ components: [joinButton] });
 
     // Setup a collector or listener for button interaction
-    const filter = (i: MessageComponentInteraction) => i.customId === 'join_brawl' && i.user.id !== interaction.client.user?.id;
-    const collector = interaction.channel.createMessageComponentCollector({ filter, time: settings.waitTime }); // Adjust time as necessary
+    const filter = (i: MessageComponentInteraction) => {
+        const customIdPattern = /^join_brawl_(.+)$/;
+        const match = i.customId.match(customIdPattern);
+        return !!match && i.user.id !== interaction.client.user?.id;
+    };
+    const collector = buttonMessage.createMessageComponentCollector({ filter, time: settings.waitTime });
+    // const collector = interaction.channel.createMessageComponentCollector({ filter, time: settings.waitTime }); // Adjust time as necessary
 
 
     collector.on('collect', async (i: MessageComponentInteraction) => {
+        if(!i) return;
+        const customIdPattern = /^join_brawl_(.+)$/;
+        const match = i.customId.match(customIdPattern);
+        if (!match) return;
+        
+        const gameId = match[1]; // Extract the game ID from the custom ID
+        console.log(`Brawl id: ${gameId} collected a button interaction`);
+        
         const member = i.member as GuildMember;
         if (!member) return;
 
-        await i.deferReply({ ephemeral: true });
-        if (i.customId === 'join_brawl') {
-            if (players.length >= settings.maxPlayers) {
+        if (!i.deferred && !i.replied) {
+            await i.deferReply({ ephemeral: true });
+        }
+        
+        if (i.customId === `join_brawl_${gameId}`) {
+            const brawl = brawlManager.getBrawl(gameId);
+            if (!brawl) {
+                i.editReply({ content: 'This brawl no longer exists.' });
+                return;
+            }
+
+            if (brawl.players.length >= settings.maxPlayers) {
                 i.editReply({ content: 'The brawl is already full!' });
                 return;
             }
 
-            const player = await createPlayer(member, guildId, players, settings, i);
+            const player = await createPlayer(member, guildId, brawl.players, settings, i);
             if (!player) return;
             // Add player to the brawl
-            players.push(player);
+            // brawl.players.push(player);
             // Add player to the brawl message
-            await addtoBrawl(guildId, players, settings, playermessage);
+            await addtoBrawl(gameId, player, settings, playermessage);
 
         }
-        else{
+        else {
             i.editReply({ content: 'Invalid button interaction!' });
         }
     });
 
 
     collector.on('end', async (collected: { size: number; }) => {
+        console.log(`Brawl with id: ${id} collector ended`);
         if (counterMessage) await counterMessage.delete().catch(console.error);
     });
 }
@@ -161,7 +192,7 @@ async function hasRole(member: GuildMember, roleName: string): Promise<boolean> 
 
 async function createPlayer(member: GuildMember, guildId: string, players: Player[], settings: ServerSettings, i: CommandInteraction | MessageComponentInteraction): Promise<Player | null> {
     console.log(`i is of type: ${i.constructor.name}`);
-    console.log(`message deffered:`,i.deferred)
+    console.log(`message deffered:`, i.deferred)
 
     const user = member.user;
     if (players.find(player => player.name === user.username)) {
@@ -214,6 +245,9 @@ async function createPlayer(member: GuildMember, guildId: string, players: Playe
 
         if (i.constructor.name == 'ButtonInteraction') {
             console.log('First time joined');
+            if (!i.deferred && !i.replied) {
+                await i.deferReply({ ephemeral: true });
+            }
             await i.editReply({ content: `Welcome to your first Brawl ${user.username}` });
         }
     }
@@ -223,21 +257,32 @@ async function createPlayer(member: GuildMember, guildId: string, players: Playe
     return player;
 }
 
-async function addtoBrawl(guildId: string, players: Player[], settings: ServerSettings, playermessage: Message) {
-    const brawl = brawlManager.getBrawl(guildId);
+async function addtoBrawl(id: string, player: Player, settings: ServerSettings, playermessage: Message) {
+    const brawl = brawlManager.getBrawl(id);
     if (!brawl) return;
-    let playerjoined = brawl.players.map(player => `${player.icon}  **${player.name}**`).join('\n');
 
+    const players = brawl.players;
+    console.log(`current players: ${players.map(player => player.name)}`);
+    console.log(`Adding player: ${player.name} to the brawl`);
+    players.push(player);
+    console.log(`updated players: ${players.map(player => player.name)}`);
+    let playerjoined = brawl.players.map(player => `${player.icon}  **${player.name}**`).join('\n');
+    console.log(`playerjoined: ${playerjoined}`);
+
+    
     // playerjoined += `${specialPlayers[user.username] || '👤'}  **${user.username}**\n`;
     let playercounttext;
-    if (players.length > 10) {
-        playercounttext = `\n**🔥🔥 ${players.length}/${settings.maxPlayers} players!! 🔥🔥**\n`;
+    console.log(`brawl.players.length: ${brawl.players.length}`);
+    if (brawl.players.length > 10) {
+        playercounttext = `\n**🔥🔥 ${brawl.players.length}/${settings.maxPlayers} players!! 🔥🔥**\n`;
     } else {
-        playercounttext = `\n**${players.length}/${settings.maxPlayers} players.**\n`;
+        playercounttext = `\n**${brawl.players.length}/${settings.maxPlayers} players.**\n`;
     }
 
     // Update the player list message
-    await playermessage.edit({ content: `**The following players have joined the Brawl:**\n\n ${playerjoined}${playercounttext}` });
+    await brawl.playerMessage.edit({ content: `**The following players have joined the Brawl:**\n\n ${playerjoined}${playercounttext}` });
     // Update the ongoing brawl in the manager
-    brawlManager.updateBrawl(guildId, players);
+
+
+    brawlManager.updateBrawl(id, players);
 }

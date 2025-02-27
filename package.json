@@ -31,7 +31,8 @@
     "mars-simple-mongodb": "^0.1.2",
     "mongodb": "^6.5.0",
     "node-schedule": "^2.1.1",
-    "random-js": "^2.1.0"
+    "random-js": "^2.1.0",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@types/common-tags": "^1.8.1",

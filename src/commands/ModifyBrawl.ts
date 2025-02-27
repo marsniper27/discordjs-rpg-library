@@ -1,6 +1,6 @@
 // Example of a command that modifies the brawl
 
-import { SlashCommandBuilder, Guild, GuildTextBasedChannel, Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options } from 'discord.js';
+import { SlashCommandBuilder, Guild, ChatInputCommandInteraction, GuildTextBasedChannel, Message, MessageComponentInteraction, CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GuildMember, User, Options } from 'discord.js';
 import { brawlManager } from '../managers/BrawlManager'; // Adjust the path accordingly
 import { Player } from '../classes/Player';
 import { findEntryByID } from 'mars-simple-mongodb';
@@ -10,6 +10,10 @@ import { SpecialPlayers } from '../classes/specialPlayers';
 export const data: any = new SlashCommandBuilder()
     .setName('modify_brawl')
     .setDescription('Modify an ongoing brawl')
+    .addStringOption((option: any) =>
+        option.setName('brawl_id')
+            .setDescription('Id for the brawl to modify')
+            .setRequired(true))
     .addStringOption((option: any) =>
         option.setName('action')
             .setDescription('Action to perform (add_player, change_time)')
@@ -21,21 +25,26 @@ export const data: any = new SlashCommandBuilder()
         option.setName('new_time')
             .setDescription('New countdown time in seconds'))
 
-export async function execute(interaction: CommandInteraction) {
+export async function execute(interaction: ChatInputCommandInteraction) {
+    const brawlId = interaction.options.getString('brawl_id'); 
+    if (!brawlId) {
+        await interaction.reply({ content: 'Brawl ID is required.', ephemeral: true });
+        return;
+    }
     const guildId = interaction.guildId;
     if (!guildId) return;
 
-    const brawl = brawlManager.getBrawl(guildId);
+    const brawl = brawlManager.getBrawl(brawlId);
 
     if (!brawl) {
         await interaction.reply({ content: 'There is no ongoing brawl in this server.', ephemeral: true });
         return;
     }
 
-    const action = interaction.options.data.find((option: { name: string; }) => option.name === 'action');
+    const action = interaction.options.getString('action');
     if (!action) return;
     // const action = interaction.options.getString('action', true).toLowerCase()||"";
-    if (action.value === 'add_player') {
+    if (action === 'add_player') {
         const user = interaction.options.get('user')?.user;
         if (user && interaction.guildId && interaction.guild && interaction.channel) {
 
@@ -103,7 +112,7 @@ export async function execute(interaction: CommandInteraction) {
             }
             let playerjoined = brawl.players.map(player => `${player.icon}  **${player.name}**`).join('\n');
             await brawl.playerMessage.edit({ content: `**The following players have joined the Brawl:**\n\n ${playerjoined}${playercounttext}` });
-            brawlManager.updateBrawl(guildId, brawl.players);
+            brawlManager.updateBrawl(brawlId, brawl.players);
             try {
                 if (interaction.channel?.isTextBased() && 'name' in interaction.channel) {
                     const channelName = interaction.channel.name;  // Safe access
@@ -122,21 +131,21 @@ export async function execute(interaction: CommandInteraction) {
                 console.error(`Could not send DM to ${user.tag}:`, error);
             }
             // Notify or trigger the interactive brawl to refresh its state
-            brawlManager.refreshBrawlState(guildId); // You would define this in your brawlManager to notify the game logic
+            brawlManager.refreshBrawlState(brawlId); // You would define this in your brawlManager to notify the game logic
 
             // await interaction.reply({ content: `${user.username} has been added to the brawl!` });
         }
-    } else if (action.value === 'change_time') {
+    } else if (action === 'change_time') {
         const newTime = interaction.options.get('new_time');
         if (newTime && typeof newTime.value === 'number') {
             console.log('newTime number:', newTime.value);
             const newWaitTime = newTime.value * 1000; // Convert to milliseconds
-            brawlManager.updateBrawlWaitTime(guildId, newWaitTime);
+            brawlManager.updateBrawlWaitTime(brawlId, newWaitTime);
             await interaction.reply({ content: `Brawl time changed to ${newTime.value} seconds.` });
         } else if (newTime && typeof newTime.value === 'string') {
             console.log('newTime string:', newTime.value);
             const newWaitTime = parseInt(newTime.value) * 1000; // Convert to milliseconds
-            brawlManager.updateBrawlWaitTime(guildId, newWaitTime);
+            brawlManager.updateBrawlWaitTime(brawlId, newWaitTime);
             await interaction.reply({ content: `Brawl time changed to ${newTime.value} seconds.` });
 
         }
